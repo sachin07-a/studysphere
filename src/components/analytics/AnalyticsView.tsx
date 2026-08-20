@@ -206,43 +206,55 @@ export const AnalyticsView: React.FC = () => {
           </div>
 
           <div className="h-56 w-full relative flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={85}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                    borderColor: 'rgba(255, 255, 255, 0.1)',
-                    borderRadius: '16px',
-                    fontSize: '12px',
-                  }}
-                  formatter={(value: any) => [`${value} Hours`, 'Focused']}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            {pieData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center text-center p-4">
+                <PieIcon className="w-8 h-8 text-slate-600 mb-2" />
+                <p className="text-xs font-semibold text-slate-300">No Study Sessions Logged</p>
+                <p className="text-[11px] text-slate-500 mt-1 max-w-[200px]">
+                  Start a study timer session to generate your subject distribution breakdown.
+                </p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={85}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                      borderColor: 'rgba(255, 255, 255, 0.1)',
+                      borderRadius: '16px',
+                      fontSize: '12px',
+                    }}
+                    formatter={(value: any) => [`${value} Hours`, 'Focused']}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
           </div>
 
           {/* Legend */}
-          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/5">
-            {pieData.slice(0, 4).map((entry) => (
-              <div key={entry.name} className="flex items-center gap-2 text-xs truncate">
-                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
-                <span className="text-slate-300 truncate">{entry.name}</span>
-              </div>
-            ))}
-          </div>
+          {pieData.length > 0 && (
+            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/5">
+              {pieData.slice(0, 4).map((entry) => (
+                <div key={entry.name} className="flex items-center gap-2 text-xs truncate">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
+                  <span className="text-slate-300 truncate">{entry.name}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

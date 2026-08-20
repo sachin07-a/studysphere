@@ -294,33 +294,45 @@ export const DashboardView: React.FC = () => {
             </div>
 
             <div className="space-y-3.5">
-              {subjects.slice(0, 3).map((sub) => {
-                const completedHours = (sub.completedMinutesThisWeek / 60).toFixed(1);
-                const percent = Math.min(100, Math.round((sub.completedMinutesThisWeek / (sub.weeklyGoalHours * 60)) * 100));
-                return (
-                  <div key={sub.id} className="p-3 rounded-2xl bg-slate-900/60 border border-white/5 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: sub.color, boxShadow: `0 0 10px ${sub.color}` }}
-                        />
-                        <span className="text-xs font-bold text-slate-200">{sub.name}</span>
+              {subjects.length === 0 ? (
+                <div className="text-center py-6 text-slate-400 text-xs space-y-2">
+                  <p>No subjects added yet.</p>
+                  <button
+                    onClick={() => setActiveView('subjects')}
+                    className="px-3 py-1.5 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-bold hover:bg-cyan-500/30"
+                  >
+                    + Add Your First Subject
+                  </button>
+                </div>
+              ) : (
+                subjects.slice(0, 3).map((sub) => {
+                  const completedHours = (sub.completedMinutesThisWeek / 60).toFixed(1);
+                  const percent = Math.min(100, Math.round((sub.completedMinutesThisWeek / (sub.weeklyGoalHours * 60)) * 100));
+                  return (
+                    <div key={sub.id} className="p-3 rounded-2xl bg-slate-900/60 border border-white/5 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: sub.color, boxShadow: `0 0 10px ${sub.color}` }}
+                          />
+                          <span className="text-xs font-bold text-slate-200">{sub.name}</span>
+                        </div>
+                        <span className="text-xs font-mono text-slate-400">
+                          {completedHours}h / {sub.weeklyGoalHours}h
+                        </span>
                       </div>
-                      <span className="text-xs font-mono text-slate-400">
-                        {completedHours}h / {sub.weeklyGoalHours}h
-                      </span>
-                    </div>
 
-                    <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{ width: `${percent}%`, backgroundColor: sub.color }}
-                      />
+                      <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{ width: `${percent}%`, backgroundColor: sub.color }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </div>
         </div>
@@ -386,32 +398,41 @@ export const DashboardView: React.FC = () => {
               <p className="text-[11px] font-mono uppercase text-slate-400 tracking-wider mb-2.5">
                 Daily Habit Check-in
               </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                {habits.slice(0, 3).map((habit) => {
-                  const isDone = !!(habit.completions && habit.completions[todayStr]);
-                  return (
-                    <button
-                      key={habit.id}
-                      onClick={() => toggleHabit(habit.id)}
-                      className={`p-2.5 rounded-xl border text-left transition-all flex items-center justify-between ${
-                        isDone
-                          ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-300'
-                          : 'bg-slate-900/60 border-white/5 text-slate-300 hover:border-cyan-500/40'
-                      }`}
-                    >
-                      <div className="truncate mr-2">
-                        <p className="text-xs font-semibold truncate">{habit.name}</p>
-                        <p className="text-[10px] text-slate-400 font-mono">{habit.currentStreak} 🔥 streak</p>
-                      </div>
-                      <div className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 ${
-                        isDone ? 'bg-emerald-500 text-slate-950 font-bold' : 'border border-slate-600'
-                      }`}>
-                        {isDone && '✓'}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+              {habits.length === 0 ? (
+                <div className="p-3 rounded-2xl bg-slate-900/40 border border-white/5 text-xs text-slate-400 text-center">
+                  <span>No habits tracked yet. </span>
+                  <button onClick={() => setActiveView('habits')} className="text-cyan-400 font-bold underline">
+                    Add daily habits
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                  {habits.slice(0, 3).map((habit) => {
+                    const isDone = !!(habit.completions && habit.completions[todayStr]);
+                    return (
+                      <button
+                        key={habit.id}
+                        onClick={() => toggleHabit(habit.id)}
+                        className={`p-2.5 rounded-xl border text-left transition-all flex items-center justify-between ${
+                          isDone
+                            ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-300'
+                            : 'bg-slate-900/60 border-white/5 text-slate-300 hover:border-cyan-500/40'
+                        }`}
+                      >
+                        <div className="truncate mr-2">
+                          <p className="text-xs font-semibold truncate">{habit.name}</p>
+                          <p className="text-[10px] text-slate-400 font-mono">{habit.currentStreak} 🔥 streak</p>
+                        </div>
+                        <div className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 ${
+                          isDone ? 'bg-emerald-500 text-slate-950 font-bold' : 'border border-slate-600'
+                        }`}>
+                          {isDone && '✓'}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Priority Tasks List */}
@@ -429,39 +450,48 @@ export const DashboardView: React.FC = () => {
                 </button>
               </div>
 
-              <div className="space-y-2">
-                {tasks.filter(t => !t.completed).slice(0, 3).map((task) => (
-                  <div
-                    key={task.id}
-                    className="p-3 rounded-2xl bg-slate-900/60 border border-white/5 hover:border-white/15 transition-colors flex items-center justify-between gap-3 group"
-                  >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <button
-                        onClick={() => toggleTask(task.id)}
-                        className="w-5 h-5 rounded-lg border border-slate-600 hover:border-cyan-400 hover:bg-cyan-500/20 flex items-center justify-center shrink-0 transition-colors"
-                      />
-                      <div className="truncate">
-                        <p className="text-xs font-semibold text-slate-200 group-hover:text-cyan-300 transition-colors truncate">
-                          {task.title}
-                        </p>
-                        {task.description && (
-                          <p className="text-[10px] text-slate-400 truncate">{task.description}</p>
-                        )}
+              {tasks.filter(t => !t.completed).length === 0 ? (
+                <div className="p-4 rounded-2xl bg-slate-900/40 border border-white/5 text-xs text-slate-400 text-center">
+                  <span>All caught up! No pending tasks. </span>
+                  <button onClick={() => setIsQuickCaptureOpen(true)} className="text-indigo-400 font-bold underline">
+                    Create a task
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {tasks.filter(t => !t.completed).slice(0, 3).map((task) => (
+                    <div
+                      key={task.id}
+                      className="p-3 rounded-2xl bg-slate-900/60 border border-white/5 hover:border-white/15 transition-colors flex items-center justify-between gap-3 group"
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <button
+                          onClick={() => toggleTask(task.id)}
+                          className="w-5 h-5 rounded-lg border border-slate-600 hover:border-cyan-400 hover:bg-cyan-500/20 flex items-center justify-center shrink-0 transition-colors"
+                        />
+                        <div className="truncate">
+                          <p className="text-xs font-semibold text-slate-200 group-hover:text-cyan-300 transition-colors truncate">
+                            {task.title}
+                          </p>
+                          {task.description && (
+                            <p className="text-[10px] text-slate-400 truncate">{task.description}</p>
+                          )}
+                        </div>
                       </div>
-                    </div>
 
-                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shrink-0 ${
-                      task.priority === 'high'
-                        ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                        : task.priority === 'medium'
-                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                        : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                    }`}>
-                      {task.priority}
-                    </span>
-                  </div>
-                ))}
-              </div>
+                      <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shrink-0 ${
+                        task.priority === 'high'
+                          ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                          : task.priority === 'medium'
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                          : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                      }`}>
+                        {task.priority}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
