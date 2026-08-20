@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import { 
+  UserProfile,
   Subject, 
   StudySession, 
   Habit, 
@@ -536,15 +537,31 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // Derived Productivity & AI Insights
+  const fallbackUser: UserProfile = user || storage.getUser() || {
+    id: 'usr_guest',
+    name: 'Scholar',
+    email: '',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+    major: 'General Studies',
+    academicYear: 'Freshman',
+    level: 1,
+    xp: 0,
+    dailyGoalMinutes: 240,
+    streakCount: 0,
+    longestStreak: 0,
+    lastActiveDate: new Date().toISOString().split('T')[0],
+    createdAt: new Date().toISOString(),
+  };
+
   const productivity = calculateProductivityScore(
-    user || storage.getUser(),
+    fallbackUser,
     sessions,
     habits,
     tasks
   );
 
   const aiInsights = generateAIInsights(
-    user || storage.getUser(),
+    fallbackUser,
     subjects,
     sessions,
     habits,

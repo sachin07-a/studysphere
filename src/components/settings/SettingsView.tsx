@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { 
-  Settings as SettingsIcon, 
   User, 
   Database, 
   Download, 
@@ -11,7 +10,9 @@ import {
   Sparkles, 
   Check, 
   Copy, 
-  Sliders 
+  Sliders,
+  Flame,
+  Trash2
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -20,7 +21,7 @@ import { SUPABASE_SQL_SCHEMA, isSupabaseConfigured, updateSupabaseCredentials } 
 import { useStudy } from '../../context/StudyContext';
 
 export const SettingsView: React.FC = () => {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, logout } = useAuth();
   const { theme, setTheme } = useTheme();
   const { triggerConfetti } = useStudy();
 
@@ -83,9 +84,16 @@ export const SettingsView: React.FC = () => {
     reader.readAsText(file);
   };
 
-  const handleResetData = () => {
-    if (confirm('Are you sure you want to reset all data back to the default demo state?')) {
-      storage.resetAll();
+  const handleResetDemoData = () => {
+    if (confirm('Load sample pre-filled demo data (Sachin with 12 days streak)?')) {
+      storage.loadDemoData();
+      window.location.reload();
+    }
+  };
+
+  const handleStartFreshSlate = () => {
+    if (confirm('Wipe all current progress and start fresh with 0 streaks and clean habits?')) {
+      storage.clearAll();
       window.location.reload();
     }
   };
@@ -107,7 +115,7 @@ export const SettingsView: React.FC = () => {
           System Preferences & Configuration
         </h1>
         <p className="text-xs sm:text-sm text-slate-400">
-          Manage your student identity, visual appearance, database connections, and offline exports.
+          Manage your student identity, visual appearance, database connections, and personal streak management.
         </p>
       </div>
 
@@ -291,11 +299,11 @@ export const SettingsView: React.FC = () => {
         </form>
       </div>
 
-      {/* 4. Data Backup & Reset */}
+      {/* 4. Data Portability, Clean Slate & Reset */}
       <div className="rounded-3xl glass-panel p-6 sm:p-8 border border-white/10 shadow-glass-3d space-y-6">
         <div className="flex items-center gap-2 pb-3 border-b border-white/10">
           <Download className="w-5 h-5 text-amber-400" />
-          <h2 className="text-base font-bold text-slate-100">Data Portability & Reset</h2>
+          <h2 className="text-base font-bold text-slate-100">Data Portability & Clean Slate</h2>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -314,11 +322,20 @@ export const SettingsView: React.FC = () => {
           </label>
 
           <button
-            onClick={handleResetData}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-xs font-semibold text-rose-300 border border-rose-500/30 transition-colors ml-auto"
+            onClick={handleStartFreshSlate}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-xs font-semibold text-cyan-300 border border-cyan-500/30 transition-colors ml-auto"
+            title="Start your personal fresh streak from Day 1"
+          >
+            <Flame className="w-4 h-4 text-cyan-400" />
+            <span>Start Fresh Clean Slate (0 Streaks)</span>
+          </button>
+
+          <button
+            onClick={handleResetDemoData}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-xs font-semibold text-slate-400 border border-white/5 transition-colors"
           >
             <RotateCcw className="w-4 h-4" />
-            <span>Reset Demo Data</span>
+            <span>Load Demo Data</span>
           </button>
         </div>
       </div>

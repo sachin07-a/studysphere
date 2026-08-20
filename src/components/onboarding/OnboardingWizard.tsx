@@ -8,7 +8,8 @@ import {
   Clock, 
   Flame, 
   User, 
-  GraduationCap 
+  GraduationCap,
+  Plus
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useStudy } from '../../context/StudyContext';
@@ -18,41 +19,42 @@ export const OnboardingWizard: React.FC = () => {
   const { triggerConfetti } = useStudy();
 
   const [step, setStep] = useState(1);
-  const [name, setName] = useState(user?.name || 'Sachin Sharma');
-  const [major, setMajor] = useState(user?.major || 'Computer Science & AI');
-  const [academicYear, setAcademicYear] = useState('Senior Year');
+  const [name, setName] = useState(user?.name || '');
+  const [major, setMajor] = useState(user?.major || 'Computer Science');
+  const [academicYear, setAcademicYear] = useState('Freshman');
   const [dailyGoalMinutes, setDailyGoalMinutes] = useState(240); // 4 hours
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([
-    'Mathematics & Linear Algebra',
+    'Mathematics & Calculus',
     'Data Structures & Algorithms',
-    'Machine Learning & Neural Nets',
+    'Computer Systems',
   ]);
+  const [customSubjectInput, setCustomSubjectInput] = useState('');
+
   const [selectedHabits, setSelectedHabits] = useState<string[]>([
-    'Deep Study 4+ Hours',
-    'LeetCode Problem of the Day',
-    'Read Research Paper (30m)',
-    'Anki Flashcards Active Recall',
+    'Deep Study 3+ Hours',
+    'Solve Practice Problems',
+    'Review Lecture Notes (20m)',
   ]);
+  const [customHabitInput, setCustomHabitInput] = useState('');
 
   const subjectOptions = [
-    'Mathematics & Linear Algebra',
+    'Mathematics & Calculus',
     'Data Structures & Algorithms',
-    'Machine Learning & Neural Nets',
-    'Operating Systems & Concurrency',
+    'Machine Learning & AI',
+    'Computer Systems & OS',
     'Distributed Systems & Cloud',
-    'Physics & Quantum Mechanics',
-    'Organic Chemistry',
-    'Biomedical Engineering',
+    'Physics & Mechanics',
+    'Chemistry & Biology',
+    'Economics & Finance',
   ];
 
   const habitOptions = [
-    'Deep Study 4+ Hours',
-    'LeetCode Problem of the Day',
-    'Read Research Paper (30m)',
+    'Deep Study 3+ Hours',
+    'Solve Practice Problems',
+    'Review Lecture Notes (20m)',
     'Anki Flashcards Active Recall',
+    'Read Research Paper / Book',
     'Posture Stretch & Hydration',
-    'Morning Review of Lecture Notes',
-    'Revise Formula Cheatsheets',
   ];
 
   const toggleSubject = (sub: string) => {
@@ -61,18 +63,36 @@ export const OnboardingWizard: React.FC = () => {
     );
   };
 
+  const addCustomSubject = () => {
+    if (customSubjectInput.trim() && !selectedSubjects.includes(customSubjectInput.trim())) {
+      setSelectedSubjects(prev => [...prev, customSubjectInput.trim()]);
+      setCustomSubjectInput('');
+    }
+  };
+
   const toggleHabit = (hab: string) => {
     setSelectedHabits(prev =>
       prev.includes(hab) ? prev.filter(h => h !== hab) : [...prev, hab]
     );
   };
 
+  const addCustomHabit = () => {
+    if (customHabitInput.trim() && !selectedHabits.includes(customHabitInput.trim())) {
+      setSelectedHabits(prev => [...prev, customHabitInput.trim()]);
+      setCustomHabitInput('');
+    }
+  };
+
   const handleFinish = () => {
-    completeOnboarding({
-      name,
-      major,
-      dailyGoalMinutes,
-    });
+    completeOnboarding(
+      {
+        name: name.trim() || 'Scholar',
+        major,
+        dailyGoalMinutes,
+      },
+      selectedSubjects.length > 0 ? selectedSubjects : ['Core Studies'],
+      selectedHabits.length > 0 ? selectedHabits : ['Daily Focused Study']
+    );
     triggerConfetti();
   };
 
@@ -110,7 +130,7 @@ export const OnboardingWizard: React.FC = () => {
             <div>
               <h2 className="text-2xl font-extrabold text-slate-100">What is your name?</h2>
               <p className="text-xs text-slate-400 mt-1">
-                StudySphere will personalize your daily productivity workspace and AI mentor advice.
+                StudySphere will personalize your daily productivity workspace and track your personal streak.
               </p>
             </div>
             <input
@@ -118,7 +138,7 @@ export const OnboardingWizard: React.FC = () => {
               autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Sachin Sharma"
+              placeholder="e.g. Alex Johnson"
               className="w-full px-5 py-3 rounded-2xl bg-slate-900/80 border border-white/15 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400"
             />
           </div>
@@ -144,7 +164,7 @@ export const OnboardingWizard: React.FC = () => {
                   autoFocus
                   value={major}
                   onChange={(e) => setMajor(e.target.value)}
-                  placeholder="e.g. Computer Science & AI, Medicine, Engineering"
+                  placeholder="e.g. Computer Science, Medicine, Engineering, High School"
                   className="w-full px-5 py-3 rounded-2xl bg-slate-900/80 border border-white/15 text-sm text-slate-100 focus:outline-none focus:border-purple-400"
                 />
               </div>
@@ -159,7 +179,7 @@ export const OnboardingWizard: React.FC = () => {
                   <option value="Sophomore">Sophomore Year</option>
                   <option value="Junior">Junior Year</option>
                   <option value="Senior Year">Senior Year</option>
-                  <option value="Graduate / Master">Graduate / Master's Degree</option>
+                  <option value="Graduate">Graduate / Master's Degree</option>
                   <option value="PhD Candidate">PhD Candidate</option>
                 </select>
               </div>
@@ -176,11 +196,32 @@ export const OnboardingWizard: React.FC = () => {
             <div>
               <h2 className="text-2xl font-extrabold text-slate-100">Select subjects to track</h2>
               <p className="text-xs text-slate-400 mt-1">
-                Choose the academic topics you want to monitor weekly.
+                Choose or add the subjects you are studying this term (starts with 0h logged).
               </p>
             </div>
+
+            {/* Custom Subject Input */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={customSubjectInput}
+                onChange={(e) => setCustomSubjectInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCustomSubject())}
+                placeholder="Type your own subject and press Add..."
+                className="flex-1 px-4 py-2 rounded-xl bg-slate-900/80 border border-white/15 text-xs text-slate-100 focus:outline-none focus:border-indigo-400"
+              />
+              <button
+                type="button"
+                onClick={addCustomSubject}
+                className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add</span>
+              </button>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-56 overflow-y-auto pr-1">
-              {subjectOptions.map((sub) => {
+              {Array.from(new Set([...subjectOptions, ...selectedSubjects])).map((sub) => {
                 const isSelected = selectedSubjects.includes(sub);
                 return (
                   <button
@@ -248,13 +289,34 @@ export const OnboardingWizard: React.FC = () => {
               <Flame className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-2xl font-extrabold text-slate-100">Select habits to build</h2>
+              <h2 className="text-2xl font-extrabold text-slate-100">Select habits to build (0-day streak)</h2>
               <p className="text-xs text-slate-400 mt-1">
-                Consistent micro-habits generate exponential cognitive compound interest.
+                Choose your daily disciplines. Your streak starts fresh from Day 1 today!
               </p>
             </div>
+
+            {/* Custom Habit Input */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={customHabitInput}
+                onChange={(e) => setCustomHabitInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCustomHabit())}
+                placeholder="Type your own custom habit and press Add..."
+                className="flex-1 px-4 py-2 rounded-xl bg-slate-900/80 border border-white/15 text-xs text-slate-100 focus:outline-none focus:border-amber-400"
+              />
+              <button
+                type="button"
+                onClick={addCustomHabit}
+                className="px-3 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold flex items-center gap-1"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add</span>
+              </button>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-56 overflow-y-auto pr-1">
-              {habitOptions.map((hab) => {
+              {Array.from(new Set([...habitOptions, ...selectedHabits])).map((hab) => {
                 const isSelected = selectedHabits.includes(hab);
                 return (
                   <button
@@ -306,7 +368,7 @@ export const OnboardingWizard: React.FC = () => {
               className="flex items-center gap-1.5 px-8 py-3 rounded-xl bg-gradient-to-r from-emerald-400 via-cyan-500 to-indigo-600 text-slate-950 font-extrabold text-xs shadow-glow-emerald hover:scale-105 transition-all"
             >
               <Check className="w-4 h-4 stroke-[3]" />
-              <span>Generate My 3D Workspace 🌌</span>
+              <span>Launch My Fresh Workspace 🌌</span>
             </button>
           )}
         </div>
