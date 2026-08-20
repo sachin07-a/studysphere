@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { 
   User, 
-  Database, 
   Download, 
   Upload, 
   RotateCcw, 
@@ -9,19 +8,19 @@ import {
   Moon, 
   Sparkles, 
   Check, 
-  Copy, 
   Sliders,
   Flame,
-  Trash2
+  Bell,
+  Volume2,
+  ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { storage } from '../../lib/storage';
-import { SUPABASE_SQL_SCHEMA, isSupabaseConfigured, updateSupabaseCredentials } from '../../lib/supabase';
 import { useStudy } from '../../context/StudyContext';
 
 export const SettingsView: React.FC = () => {
-  const { user, updateProfile, logout } = useAuth();
+  const { user, updateProfile } = useAuth();
   const { theme, setTheme } = useTheme();
   const { triggerConfetti } = useStudy();
 
@@ -31,10 +30,9 @@ export const SettingsView: React.FC = () => {
   const [dailyGoalMinutes, setDailyGoalMinutes] = useState(user?.dailyGoalMinutes || 240);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
-  // Supabase states
-  const [supabaseUrl, setSupabaseUrl] = useState(localStorage.getItem('studysphere_supabase_url') || '');
-  const [supabaseKey, setSupabaseKey] = useState(localStorage.getItem('studysphere_supabase_key') || '');
-  const [isCopiedSchema, setIsCopiedSchema] = useState(false);
+  // Focus & notification preferences
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [breakReminders, setBreakReminders] = useState(true);
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,12 +45,6 @@ export const SettingsView: React.FC = () => {
     setSavedSuccess(true);
     triggerConfetti();
     setTimeout(() => setSavedSuccess(false), 2500);
-  };
-
-  const handleSaveSupabase = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateSupabaseCredentials(supabaseUrl, supabaseKey);
-    alert('Supabase credentials successfully updated! Live synchronization enabled.');
   };
 
   const handleExportData = () => {
@@ -85,23 +77,17 @@ export const SettingsView: React.FC = () => {
   };
 
   const handleResetDemoData = () => {
-    if (confirm('Load sample pre-filled demo data (Sachin with 12 days streak)?')) {
+    if (confirm('Load sample pre-filled demo data for testing?')) {
       storage.loadDemoData();
       window.location.reload();
     }
   };
 
   const handleStartFreshSlate = () => {
-    if (confirm('Wipe all current progress and start fresh with 0 streaks and clean habits?')) {
+    if (confirm('Wipe all current progress and start completely fresh with 0-day streaks and clean habits?')) {
       storage.clearAll();
       window.location.reload();
     }
-  };
-
-  const copySqlSchema = () => {
-    navigator.clipboard.writeText(SUPABASE_SQL_SCHEMA);
-    setIsCopiedSchema(true);
-    setTimeout(() => setIsCopiedSchema(false), 2000);
   };
 
   return (
@@ -109,13 +95,13 @@ export const SettingsView: React.FC = () => {
       {/* Header */}
       <div>
         <span className="text-xs font-mono uppercase tracking-widest text-cyan-400 font-bold">
-          WORKSPACE & INTEGRATIONS
+          PREFERENCES & CONTROLS
         </span>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-100 tracking-tight">
-          System Preferences & Configuration
+          Account & Study Workspace Settings
         </h1>
         <p className="text-xs sm:text-sm text-slate-400">
-          Manage your student identity, visual appearance, database connections, and personal streak management.
+          Personalize your student identity, visual appearance, focus timer options, and offline data backups.
         </p>
       </div>
 
@@ -188,7 +174,7 @@ export const SettingsView: React.FC = () => {
         </form>
       </div>
 
-      {/* 2. Theme & Appearance */}
+      {/* 2. Theme & UI Appearance */}
       <div className="rounded-3xl glass-panel p-6 sm:p-8 border border-white/10 shadow-glass-3d space-y-6">
         <div className="flex items-center gap-2 pb-3 border-b border-white/10">
           <Sliders className="w-5 h-5 text-purple-400" />
@@ -234,72 +220,46 @@ export const SettingsView: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. Supabase Cloud Database Configuration */}
-      <div className="rounded-3xl glass-panel p-6 sm:p-8 border border-white/10 shadow-glass-3d space-y-6">
-        <div className="flex items-center justify-between pb-3 border-b border-white/10">
-          <div className="flex items-center gap-2">
-            <Database className="w-5 h-5 text-emerald-400" />
-            <h2 className="text-base font-bold text-slate-100">Supabase Cloud Sync</h2>
-          </div>
-          <span className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full border ${
-            isSupabaseConfigured()
-              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-              : 'bg-slate-800 text-slate-400 border-white/10'
-          }`}>
-            {isSupabaseConfigured() ? 'Connected' : 'Local Storage Mode'}
-          </span>
+      {/* 3. Focus & Productivity Preferences */}
+      <div className="rounded-3xl glass-panel p-6 sm:p-8 border border-white/10 shadow-glass-3d space-y-5">
+        <div className="flex items-center gap-2 pb-3 border-b border-white/10">
+          <Bell className="w-5 h-5 text-indigo-400" />
+          <h2 className="text-base font-bold text-slate-100">Study & Focus Sound Controls</h2>
         </div>
 
-        <p className="text-xs text-slate-300/80 leading-relaxed">
-          StudySphere operates with a zero-latency hybrid storage engine. You can connect your personal Supabase project for real-time PostgreSQL database synchronization and multi-device persistence.
-        </p>
-
-        <form onSubmit={handleSaveSupabase} className="space-y-4">
-          <div className="space-y-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Supabase Project URL</label>
-              <input
-                type="text"
-                value={supabaseUrl}
-                onChange={(e) => setSupabaseUrl(e.target.value)}
-                placeholder="https://your-project.supabase.co"
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-slate-100 focus:outline-none focus:border-emerald-400 font-mono"
-              />
+        <div className="space-y-3">
+          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-900/60 border border-white/5">
+            <div className="flex items-center gap-3">
+              <Volume2 className="w-4 h-4 text-cyan-400" />
+              <div>
+                <p className="text-xs font-bold text-slate-200">Procedural Ambient Sound Synthesis</p>
+                <p className="text-[11px] text-slate-400">Offline Web Audio generator (Rain, Forest, Café, 40Hz Waves)</p>
+              </div>
             </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Supabase Anon Public API Key</label>
-              <input
-                type="password"
-                value={supabaseKey}
-                onChange={(e) => setSupabaseKey(e.target.value)}
-                placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..."
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-slate-100 focus:outline-none focus:border-emerald-400 font-mono"
-              />
-            </div>
+            <input
+              type="checkbox"
+              checked={soundEnabled}
+              onChange={(e) => setSoundEnabled(e.target.checked)}
+              className="w-4 h-4 accent-cyan-400 rounded cursor-pointer"
+            />
           </div>
 
-          <div className="flex items-center justify-between pt-2">
-            <button
-              type="button"
-              onClick={copySqlSchema}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-mono text-slate-300 transition-colors"
-            >
-              {isCopiedSchema ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{isCopiedSchema ? 'Schema Copied!' : 'Copy Supabase SQL Schema'}</span>
-            </button>
-
-            <button
-              type="submit"
-              className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-bold text-xs shadow-glow-emerald hover:scale-105 transition-all"
-            >
-              Connect Cloud Database
-            </button>
+          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-900/60 border border-white/5">
+            <div className="flex items-center gap-3">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <div>
+                <p className="text-xs font-bold text-slate-200">Local-First Privacy & Zero Telemetry</p>
+                <p className="text-[11px] text-slate-400">All data stays in your browser with offline persistence</p>
+              </div>
+            </div>
+            <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+              Active
+            </span>
           </div>
-        </form>
+        </div>
       </div>
 
-      {/* 4. Data Portability, Clean Slate & Reset */}
+      {/* 4. Data Portability & Clean Slate */}
       <div className="rounded-3xl glass-panel p-6 sm:p-8 border border-white/10 shadow-glass-3d space-y-6">
         <div className="flex items-center gap-2 pb-3 border-b border-white/10">
           <Download className="w-5 h-5 text-amber-400" />
