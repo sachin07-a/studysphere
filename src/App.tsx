@@ -31,8 +31,6 @@ import { SettingsView } from './components/settings/SettingsView';
 import { FlashcardsView } from './components/flashcards/FlashcardsView';
 import { ExamsView } from './components/exams/ExamsView';
 import { PDFReaderView } from './components/pdf/PDFReaderView';
-import { GPACalculatorView } from './components/gpa/GPACalculatorView';
-import { StudyRoomView } from './components/community/StudyRoomView';
 
 const MainLayout: React.FC = () => {
   const { isAuthenticated, isOnboarded, isLoading } = useAuth();
@@ -79,10 +77,6 @@ const MainLayout: React.FC = () => {
         return <ExamsView />;
       case 'pdf-reader':
         return <PDFReaderView />;
-      case 'gpa-calc':
-        return <GPACalculatorView />;
-      case 'study-room':
-        return <StudyRoomView />;
       case 'habits':
         return <HabitsView />;
       case 'tasks':

@@ -75,8 +75,6 @@ export const Sidebar: React.FC = () => {
       badgeColor: 'bg-rose-500/20 text-rose-300'
     },
     { id: 'pdf-reader', label: 'PDF Lecture Reader', icon: FileSpreadsheet },
-    { id: 'gpa-calc', label: 'GPA & Grade Simulator', icon: Calculator },
-    { id: 'study-room', label: 'Virtual Study Lobby', icon: Users },
     { id: 'subjects', label: 'Subjects', icon: BookOpen },
     { 
       id: 'habits', 

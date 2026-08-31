@@ -15,12 +15,10 @@ import {
   FlashcardDeck,
   Flashcard,
   Exam,
-  SyllabusUnit,
-  CourseGrade,
-  StudyPeer
+  SyllabusUnit
 } from '../types';
 import { YouTubeTrack, CURATED_YOUTUBE_STATIONS, parseYouTubeVideoId } from '../types/music';
-import { storage, INITIAL_PEERS } from '../lib/storage';
+import { storage } from '../lib/storage';
 import { soundEngine, AmbientType } from '../lib/audio';
 import { calculateProductivityScore, generateAIInsights, calculateOverallStreak } from '../lib/productivity';
 import { calculateSM2, ReviewRating } from '../lib/spacedRepetition';
@@ -40,9 +38,7 @@ export type ActiveView =
   | 'settings'
   | 'flashcards'
   | 'exams'
-  | 'pdf-reader'
-  | 'gpa-calc'
-  | 'study-room';
+  | 'pdf-reader';
 
 interface StudyContextType {
   activeView: ActiveView;
@@ -108,8 +104,6 @@ interface StudyContextType {
   decks: FlashcardDeck[];
   flashcards: Flashcard[];
   exams: Exam[];
-  gpaCourses: CourseGrade[];
-  peers: StudyPeer[];
   productivity: ProductivityBreakdown;
   aiInsights: AIInsight[];
 
@@ -150,11 +144,6 @@ interface StudyContextType {
   updateExam: (id: string, partial: Partial<Exam>) => void;
   deleteExam: (id: string) => void;
   toggleSyllabusUnit: (examId: string, unitId: string) => void;
-
-  // GPA Courses CRUD
-  addGPACourse: (course: Omit<CourseGrade, 'id' | 'userId'>) => void;
-  updateGPACourse: (id: string, partial: Partial<CourseGrade>) => void;
-  deleteGPACourse: (id: string) => void;
 
   triggerConfetti: () => void;
   newAchievementUnlock: Achievement | null;
@@ -204,8 +193,6 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [decks, setDecks] = useState<FlashcardDeck[]>(() => storage.getDecks());
   const [flashcards, setFlashcards] = useState<Flashcard[]>(() => storage.getFlashcards());
   const [exams, setExams] = useState<Exam[]>(() => storage.getExams());
-  const [gpaCourses, setGPACourses] = useState<CourseGrade[]>(() => storage.getGPACourses());
-  const [peers] = useState<StudyPeer[]>(INITIAL_PEERS);
   const [newAchievementUnlock, setNewAchievementUnlock] = useState<Achievement | null>(null);
 
   // Confetti trigger
@@ -385,7 +372,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     // Award XP
     const earnedXP = durationMinutes * 10 + rating * 15;
-    const { leveledUp, newLevel } = addXP(earnedXP);
+    const { leveledUp } = addXP(earnedXP);
 
     if (leveledUp) {
       triggerConfetti();
@@ -856,37 +843,6 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     addXP(35);
   };
 
-  // --- GPA Courses CRUD ---
-  const addGPACourse = (course: Omit<CourseGrade, 'id' | 'userId'>) => {
-    const newCourse: CourseGrade = {
-      ...course,
-      id: 'crs_' + Date.now(),
-      userId: user?.id || 'usr_guest',
-    };
-    setGPACourses(prev => {
-      const updated = [...prev, newCourse];
-      storage.setGPACourses(updated);
-      return updated;
-    });
-    addXP(50);
-  };
-
-  const updateGPACourse = (id: string, partial: Partial<CourseGrade>) => {
-    setGPACourses(prev => {
-      const updated = prev.map(c => (c.id === id ? { ...c, ...partial } : c));
-      storage.setGPACourses(updated);
-      return updated;
-    });
-  };
-
-  const deleteGPACourse = (id: string) => {
-    setGPACourses(prev => {
-      const updated = prev.filter(c => c.id !== id);
-      storage.setGPACourses(updated);
-      return updated;
-    });
-  };
-
   // Achievement unlock evaluator
   const checkAchievementsAfterSession = (sessionMinutes: number, rating: number) => {
     setAchievements(prev => {
@@ -1006,8 +962,6 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         decks,
         flashcards,
         exams,
-        gpaCourses,
-        peers,
         productivity,
         aiInsights,
         addSubject,
@@ -1038,9 +992,6 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         updateExam,
         deleteExam,
         toggleSyllabusUnit,
-        addGPACourse,
-        updateGPACourse,
-        deleteGPACourse,
         triggerConfetti,
         newAchievementUnlock,
         dismissAchievementPopup,

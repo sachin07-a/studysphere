@@ -212,35 +212,3 @@ export interface Exam {
   syllabusUnits: SyllabusUnit[];
   createdAt: string;
 }
-
-// --- GPA & Grade Simulator Types ---
-export interface CourseAssignment {
-  id: string;
-  name: string;
-  weight: number; // percentage (e.g. 20)
-  score: number; // achieved score (e.g. 88)
-  maxScore: number; // e.g. 100
-}
-
-export interface CourseGrade {
-  id: string;
-  userId: string;
-  courseName: string;
-  courseCode: string;
-  credits: number;
-  targetGrade: string; // A+, A, A-, B+, etc.
-  assignments: CourseAssignment[];
-}
-
-// --- Virtual Peer Lobby Types ---
-export interface StudyPeer {
-  id: string;
-  name: string;
-  avatar: string;
-  major: string;
-  currentSubject: string;
-  focusMinutesToday: number;
-  isStudying: boolean;
-  streak: number;
-  statusMessage?: string;
-}

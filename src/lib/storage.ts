@@ -9,9 +9,7 @@ import {
   Achievement,
   FlashcardDeck,
   Flashcard,
-  Exam,
-  CourseGrade,
-  StudyPeer
+  Exam
 } from '../types';
 import { 
   INITIAL_USER, 
@@ -40,7 +38,6 @@ export interface UserAccount {
   decks?: FlashcardDeck[];
   flashcards?: Flashcard[];
   exams?: Exam[];
-  gpaCourses?: CourseGrade[];
   customYouTubeUrls?: string[];
   createdAt: string;
 }
@@ -57,7 +54,6 @@ const KEYS = {
   DECKS: 'studysphere_decks',
   FLASHCARDS: 'studysphere_flashcards',
   EXAMS: 'studysphere_exams',
-  GPA_COURSES: 'studysphere_gpa_courses',
   ONBOARDED: 'studysphere_onboarded',
   AUTH_TOKEN: 'studysphere_auth_token',
   REGISTERED_ACCOUNTS: 'studysphere_registered_accounts',
@@ -152,133 +148,43 @@ export const INITIAL_FLASHCARDS: Flashcard[] = [
 
 export const INITIAL_EXAMS: Exam[] = [
   {
-    id: 'exam_dsa_final',
+    id: 'exam_1',
     userId: 'usr_guest',
     subjectId: 'sub_dsa',
-    subjectName: 'Data Structures & Algorithms',
-    title: 'Comprehensive Midterm & Coding Practical',
-    examDate: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    startTime: '09:30',
+    subjectName: 'Advanced Data Structures & Algorithms',
+    title: 'Comprehensive Midterm Examination',
+    examDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    startTime: '10:00',
     location: 'Turing Hall 301',
-    targetGrade: 'A+',
+    targetGrade: 'A',
     weightPercent: 35,
     syllabusUnits: [
-      { id: 'u1', name: 'Asymptotic Analysis & Recurrences', completed: true, estimatedHours: 4 },
-      { id: 'u2', name: 'Red-Black Trees & AVL Self-Balancing Trees', completed: true, estimatedHours: 6 },
-      { id: 'u3', name: 'Graph Traversal (DFS/BFS, Dijkstra, Bellman-Ford)', completed: false, estimatedHours: 8 },
-      { id: 'u4', name: 'Dynamic Programming (Memoization & 2D Tabulation)', completed: false, estimatedHours: 10 }
+      { id: 'u1', name: 'Asymptotic Analysis & Master Theorem', completed: true, estimatedHours: 3 },
+      { id: 'u2', name: 'Balanced Trees (AVL & Red-Black Trees)', completed: true, estimatedHours: 4 },
+      { id: 'u3', name: 'Graph Algorithms (Dijkstra, Bellman-Ford, MST)', completed: false, estimatedHours: 6 },
+      { id: 'u4', name: 'Dynamic Programming Recurrences & Memoization', completed: false, estimatedHours: 8 },
+      { id: 'u5', name: 'Disjoint Set Union & Kruskal Algorithm', completed: false, estimatedHours: 3 }
     ],
     createdAt: new Date().toISOString()
   },
   {
-    id: 'exam_os_final',
+    id: 'exam_2',
     userId: 'usr_guest',
-    subjectId: 'sub_os',
-    subjectName: 'Operating Systems & Architecture',
-    title: 'Final Examination & Concurrency Lab',
-    examDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    startTime: '14:00',
-    location: 'Science Complex B',
-    targetGrade: 'A',
+    subjectId: 'sub_ml',
+    subjectName: 'Neural Networks & Deep Learning',
+    title: 'Transformer Architectures Final Project & Oral Exam',
+    examDate: new Date(Date.now() + 18 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    startTime: '14:30',
+    location: 'Engineering Atrium',
+    targetGrade: 'A+',
     weightPercent: 40,
     syllabusUnits: [
-      { id: 'u201', name: 'Process Synchronization & Mutex/Semaphores', completed: true, estimatedHours: 5 },
-      { id: 'u202', name: 'Virtual Memory & Page Replacement Algorithms (LRU)', completed: false, estimatedHours: 7 },
-      { id: 'u203', name: 'File Systems & Disk Scheduling (SCAN/C-SCAN)', completed: false, estimatedHours: 5 }
+      { id: 'u21', name: 'Backpropagation & Loss Gradients', completed: true, estimatedHours: 4 },
+      { id: 'u22', name: 'Multi-Head Self-Attention Mechanisms', completed: true, estimatedHours: 5 },
+      { id: 'u23', name: 'Positional Encodings & LayerNorm', completed: false, estimatedHours: 4 },
+      { id: 'u24', name: 'Beam Search & Temperature Sampling', completed: false, estimatedHours: 3 }
     ],
     createdAt: new Date().toISOString()
-  }
-];
-
-export const INITIAL_GPA_COURSES: CourseGrade[] = [
-  {
-    id: 'course_1',
-    userId: 'usr_guest',
-    courseName: 'Data Structures & Algorithms',
-    courseCode: 'CS 301',
-    credits: 4,
-    targetGrade: 'A',
-    assignments: [
-      { id: 'a1', name: 'Midterm Exam', weight: 30, score: 92, maxScore: 100 },
-      { id: 'a2', name: 'Programming Projects (3)', weight: 30, score: 96, maxScore: 100 },
-      { id: 'a3', name: 'Quizzes & Homework', weight: 10, score: 95, maxScore: 100 },
-      { id: 'a4', name: 'Final Examination', weight: 30, score: 0, maxScore: 100 }
-    ]
-  },
-  {
-    id: 'course_2',
-    userId: 'usr_guest',
-    courseName: 'Operating Systems & Concurrency',
-    courseCode: 'CS 340',
-    credits: 3,
-    targetGrade: 'A-',
-    assignments: [
-      { id: 'a21', name: 'Lab Shell Project', weight: 25, score: 90, maxScore: 100 },
-      { id: 'a22', name: 'Midterm Exam', weight: 25, score: 84, maxScore: 100 },
-      { id: 'a23', name: 'Kernel Memory Lab', weight: 20, score: 88, maxScore: 100 },
-      { id: 'a24', name: 'Final Exam', weight: 30, score: 0, maxScore: 100 }
-    ]
-  },
-  {
-    id: 'course_3',
-    userId: 'usr_guest',
-    courseName: 'Linear Algebra & Matrix Methods',
-    courseCode: 'MATH 220',
-    credits: 4,
-    targetGrade: 'A',
-    assignments: [
-      { id: 'a31', name: 'Exam 1 (Vectors & Spaces)', weight: 25, score: 94, maxScore: 100 },
-      { id: 'a32', name: 'Exam 2 (Eigenvalues & SVD)', weight: 25, score: 91, maxScore: 100 },
-      { id: 'a33', name: 'Weekly Problem Sets', weight: 20, score: 98, maxScore: 100 },
-      { id: 'a34', name: 'Cumulative Final', weight: 30, score: 0, maxScore: 100 }
-    ]
-  }
-];
-
-export const INITIAL_PEERS: StudyPeer[] = [
-  {
-    id: 'peer_1',
-    name: 'Elena Rostova',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150',
-    major: 'Neuroscience & Pre-Med',
-    currentSubject: 'Organic Chemistry II',
-    focusMinutesToday: 185,
-    isStudying: true,
-    streak: 14,
-    statusMessage: 'Memorizing reaction mechanisms for Friday midterm 🧪'
-  },
-  {
-    id: 'peer_2',
-    name: 'Marcus Chen',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150',
-    major: 'Computer Science',
-    currentSubject: 'Distributed Systems',
-    focusMinutesToday: 240,
-    isStudying: true,
-    streak: 21,
-    statusMessage: 'Debugging Paxos consensus implementation 💻'
-  },
-  {
-    id: 'peer_3',
-    name: 'Aaliyah Patel',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150',
-    major: 'Mechanical Engineering',
-    currentSubject: 'Thermodynamics & Heat Transfer',
-    focusMinutesToday: 120,
-    isStudying: true,
-    streak: 9,
-    statusMessage: 'Solving Rankine power cycle enthalpy problems ⚙️'
-  },
-  {
-    id: 'peer_4',
-    name: 'Julian Vance',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150',
-    major: 'Economics & Finance',
-    currentSubject: 'Econometrics & Stata',
-    focusMinutesToday: 95,
-    isStudying: false,
-    streak: 5,
-    statusMessage: 'Taking 10m Pomodoro coffee break ☕'
   }
 ];
 
@@ -301,8 +207,7 @@ export const hashPassword = async (password: string): Promise<string> => {
 };
 
 export const storage = {
-  // --- Multi-User Accounts Registry ---
-
+  // Multi-Account Registry
   getRegisteredAccounts: (): Record<string, UserAccount> => {
     const data = localStorage.getItem(KEYS.REGISTERED_ACCOUNTS);
     if (!data) return {};
@@ -317,31 +222,29 @@ export const storage = {
     localStorage.setItem(KEYS.REGISTERED_ACCOUNTS, JSON.stringify(accounts));
   },
 
-  registerUserAccount: async (
-    name: string, 
-    email: string, 
-    password: string
-  ): Promise<{ success: boolean; user?: UserProfile; error?: string }> => {
-    const cleanEmail = email.trim().toLowerCase();
+  findAccountByEmail: (email: string): UserAccount | null => {
     const accounts = storage.getRegisteredAccounts();
+    const normalized = email.toLowerCase().trim();
+    return accounts[normalized] || null;
+  },
 
-    if (accounts[cleanEmail]) {
-      return { 
-        success: false, 
-        error: 'An account with this email already exists. Please log in.' 
-      };
+  registerAccount: async (email: string, password: string, name: string): Promise<{ success: boolean; error?: string; account?: UserAccount }> => {
+    const normalized = email.toLowerCase().trim();
+    const existing = storage.findAccountByEmail(normalized);
+    if (existing) {
+      return { success: false, error: 'An account with this email already exists. Please log in.' };
     }
 
     const passwordHash = await hashPassword(password);
-    const userId = 'usr_' + Date.now();
+    const id = 'usr_' + Date.now();
 
     const newUser: UserProfile = {
-      id: userId,
+      id,
       name: name.trim() || 'Scholar',
-      email: cleanEmail,
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+      email: normalized,
+      avatar: `https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250`,
       major: 'Computer Science',
-      academicYear: 'Freshman',
+      academicYear: 'Sophomore',
       level: 1,
       xp: 0,
       dailyGoalMinutes: 240,
@@ -352,65 +255,52 @@ export const storage = {
     };
 
     const newAccount: UserAccount = {
-      id: userId,
-      email: cleanEmail,
+      id,
+      email: normalized,
       passwordHash,
-      name: newUser.name,
+      name: name.trim() || 'Scholar',
       user: newUser,
-      subjects: [],
+      subjects: INITIAL_SUBJECTS.map(s => ({ ...s, id: 'sub_' + Math.random().toString(36).substr(2, 9) })),
       sessions: [],
-      habits: [],
-      tasks: [],
-      goals: [],
-      notes: [],
+      habits: INITIAL_HABITS.map(h => ({ ...h, id: 'hab_' + Math.random().toString(36).substr(2, 9), completions: {}, currentStreak: 0, longestStreak: 0 })),
+      tasks: INITIAL_TASKS.map(t => ({ ...t, id: 'tsk_' + Math.random().toString(36).substr(2, 9), completed: false })),
+      goals: INITIAL_GOALS.map(g => ({ ...g, id: 'gol_' + Math.random().toString(36).substr(2, 9), completed: false })),
+      notes: INITIAL_NOTES.map(n => ({ ...n, id: 'not_' + Math.random().toString(36).substr(2, 9) })),
       achievements: INITIAL_ACHIEVEMENTS.map(a => ({ ...a, unlockedAt: undefined, progress: 0 })),
-      decks: [],
-      flashcards: [],
-      exams: [],
-      gpaCourses: [],
+      decks: INITIAL_DECKS,
+      flashcards: INITIAL_FLASHCARDS,
+      exams: INITIAL_EXAMS,
       customYouTubeUrls: [],
-      createdAt: new Date().toISOString(),
+      createdAt: new Date().toISOString()
     };
 
-    accounts[cleanEmail] = newAccount;
+    const accounts = storage.getRegisteredAccounts();
+    accounts[normalized] = newAccount;
     storage.saveRegisteredAccounts(accounts);
 
-    // Set active workspace
-    storage.setActiveAccount(newAccount);
-    storage.setOnboarded(false);
-
-    return { success: true, user: newUser };
+    // Set as active session
+    storage.loadAccountData(newAccount);
+    return { success: true, account: newAccount };
   },
 
-  authenticateUserAccount: async (
-    email: string, 
-    password: string
-  ): Promise<{ success: boolean; user?: UserProfile; error?: string }> => {
-    const cleanEmail = email.trim().toLowerCase();
-    const accounts = storage.getRegisteredAccounts();
-    const account = accounts[cleanEmail];
-
+  authenticateAccount: async (email: string, password: string): Promise<{ success: boolean; error?: string; account?: UserAccount }> => {
+    const normalized = email.toLowerCase().trim();
+    const account = storage.findAccountByEmail(normalized);
     if (!account) {
-      return { 
-        success: false, 
-        error: 'Account not found. Please check your email or click Sign Up.' 
-      };
+      return { success: false, error: 'No registered account found with this email.' };
     }
 
-    const providedHash = await hashPassword(password);
-    if (account.passwordHash !== providedHash) {
-      return { 
-        success: false, 
-        error: 'Incorrect password. Please try again.' 
-      };
+    const inputHash = await hashPassword(password);
+    if (account.passwordHash !== inputHash) {
+      return { success: false, error: 'Incorrect password. Please try again.' };
     }
 
-    // Successfully authenticated -> load this user's isolated workspace
-    storage.setActiveAccount(account);
-    return { success: true, user: account.user };
+    // Save and load active workspace
+    storage.loadAccountData(account);
+    return { success: true, account };
   },
 
-  setActiveAccount: (account: UserAccount) => {
+  loadAccountData: (account: UserAccount) => {
     storage.setUser(account.user);
     storage.setSubjects(account.subjects || []);
     storage.setSessions(account.sessions || []);
@@ -419,22 +309,24 @@ export const storage = {
     storage.setGoals(account.goals || []);
     storage.setNotes(account.notes || []);
     storage.setAchievements(account.achievements || INITIAL_ACHIEVEMENTS);
-    storage.setDecks(account.decks || []);
-    storage.setFlashcards(account.flashcards || []);
-    storage.setExams(account.exams || []);
-    storage.setGPACourses(account.gpaCourses || []);
+    storage.setDecks(account.decks || INITIAL_DECKS);
+    storage.setFlashcards(account.flashcards || INITIAL_FLASHCARDS);
+    storage.setExams(account.exams || INITIAL_EXAMS);
+    if (account.customYouTubeUrls) {
+      localStorage.setItem(KEYS.YOUTUBE_URLS, JSON.stringify(account.customYouTubeUrls));
+    }
+    storage.setOnboarded(true);
     storage.setAuthToken('token_' + account.id + '_' + Date.now());
   },
 
   syncActiveUserAccount: () => {
     const user = storage.getUser();
     if (!user || !user.email) return;
-
-    const cleanEmail = user.email.toLowerCase();
+    const normalized = user.email.toLowerCase().trim();
     const accounts = storage.getRegisteredAccounts();
-    if (accounts[cleanEmail]) {
-      accounts[cleanEmail] = {
-        ...accounts[cleanEmail],
+    if (accounts[normalized]) {
+      accounts[normalized] = {
+        ...accounts[normalized],
         user: user,
         subjects: storage.getSubjects(),
         sessions: storage.getSessions(),
@@ -446,7 +338,7 @@ export const storage = {
         decks: storage.getDecks(),
         flashcards: storage.getFlashcards(),
         exams: storage.getExams(),
-        gpaCourses: storage.getGPACourses(),
+        customYouTubeUrls: storage.getCustomYouTubeUrls(),
       };
       storage.saveRegisteredAccounts(accounts);
     }
@@ -565,11 +457,11 @@ export const storage = {
 
   getAchievements: (): Achievement[] => {
     const data = localStorage.getItem(KEYS.ACHIEVEMENTS);
-    if (!data) return INITIAL_ACHIEVEMENTS;
+    if (!data) return [];
     try {
       return JSON.parse(data);
     } catch {
-      return INITIAL_ACHIEVEMENTS;
+      return [];
     }
   },
 
@@ -578,14 +470,14 @@ export const storage = {
     storage.syncActiveUserAccount();
   },
 
-  // --- Flashcard Decks Accessors ---
+  // --- Flashcards Accessors ---
   getDecks: (): FlashcardDeck[] => {
     const data = localStorage.getItem(KEYS.DECKS);
-    if (!data) return [];
+    if (!data) return INITIAL_DECKS;
     try {
       return JSON.parse(data);
     } catch {
-      return [];
+      return INITIAL_DECKS;
     }
   },
 
@@ -596,11 +488,11 @@ export const storage = {
 
   getFlashcards: (): Flashcard[] => {
     const data = localStorage.getItem(KEYS.FLASHCARDS);
-    if (!data) return [];
+    if (!data) return INITIAL_FLASHCARDS;
     try {
       return JSON.parse(data);
     } catch {
-      return [];
+      return INITIAL_FLASHCARDS;
     }
   },
 
@@ -612,32 +504,16 @@ export const storage = {
   // --- Exams Accessors ---
   getExams: (): Exam[] => {
     const data = localStorage.getItem(KEYS.EXAMS);
-    if (!data) return [];
+    if (!data) return INITIAL_EXAMS;
     try {
       return JSON.parse(data);
     } catch {
-      return [];
+      return INITIAL_EXAMS;
     }
   },
 
   setExams: (exams: Exam[]) => {
     localStorage.setItem(KEYS.EXAMS, JSON.stringify(exams));
-    storage.syncActiveUserAccount();
-  },
-
-  // --- GPA Courses Accessors ---
-  getGPACourses: (): CourseGrade[] => {
-    const data = localStorage.getItem(KEYS.GPA_COURSES);
-    if (!data) return [];
-    try {
-      return JSON.parse(data);
-    } catch {
-      return [];
-    }
-  },
-
-  setGPACourses: (courses: CourseGrade[]) => {
-    localStorage.setItem(KEYS.GPA_COURSES, JSON.stringify(courses));
     storage.syncActiveUserAccount();
   },
 
@@ -658,8 +534,22 @@ export const storage = {
     localStorage.setItem(KEYS.YOUTUBE_URLS, JSON.stringify(updated));
   },
 
-  isOnboarded: (): boolean => {
+  getOnboarded: (): boolean => {
     return localStorage.getItem(KEYS.ONBOARDED) === 'true';
+  },
+
+  isOnboarded: (): boolean => {
+    return storage.getOnboarded();
+  },
+
+  authenticateUserAccount: async (email: string, password: string): Promise<{ success: boolean; error?: string; user?: UserProfile }> => {
+    const res = await storage.authenticateAccount(email, password);
+    return { success: res.success, error: res.error, user: res.account?.user };
+  },
+
+  registerUserAccount: async (name: string, email: string, password: string): Promise<{ success: boolean; error?: string; user?: UserProfile }> => {
+    const res = await storage.registerAccount(email, password, name);
+    return { success: res.success, error: res.error, user: res.account?.user };
   },
 
   setOnboarded: (val: boolean) => {
@@ -690,43 +580,35 @@ export const storage = {
     storage.setDecks(INITIAL_DECKS);
     storage.setFlashcards(INITIAL_FLASHCARDS);
     storage.setExams(INITIAL_EXAMS);
-    storage.setGPACourses(INITIAL_GPA_COURSES);
     storage.setOnboarded(true);
-    storage.setAuthToken('token_guest_demo_2026');
+    storage.setAuthToken('token_demo_scholar');
   },
 
-  initCleanUserData: (
-    user: UserProfile,
-    chosenSubjects: string[],
-    chosenHabits: string[]
-  ) => {
-    const cleanSubjects: Subject[] = chosenSubjects.map((subName, i) => {
-      const colors = ['#06b6d4', '#6366f1', '#a855f7', '#10b981', '#f59e0b', '#f43f5e'];
-      const icons = ['BookOpen', 'Code2', 'Cpu', 'Brain', 'Layers', 'Globe'];
-      const codes = ['CS 101', 'MATH 201', 'SCI 105', 'ENG 110', 'HIST 120', 'BUS 102'];
+  initCleanUserData: (user: UserProfile, chosenSubjects: string[], chosenHabits: string[]) => {
+    const cleanSubjects: Subject[] = chosenSubjects.map((name, i) => {
+      const colors = ['#06b6d4', '#6366f1', '#a855f7', '#10b981', '#f59e0b', '#ec4899'];
       return {
-        id: 'sub_' + (i + 1),
-        name: subName,
-        code: codes[i % codes.length],
-        icon: icons[i % icons.length],
+        id: 'sub_' + Date.now() + '_' + i,
+        name,
+        code: name.substring(0, 3).toUpperCase() + ' ' + (100 + i * 10),
+        icon: 'BookOpen',
         color: colors[i % colors.length],
-        weeklyGoalHours: 10,
+        weeklyGoalHours: 6,
         completedMinutesThisWeek: 0,
         totalStudyMinutes: 0,
         createdAt: new Date().toISOString(),
       };
     });
 
-    const cleanHabits: Habit[] = chosenHabits.map((habitName, i) => {
-      const colors = ['#f59e0b', '#10b981', '#06b6d4', '#8b5cf6', '#ec4899'];
-      const icons = ['Sparkles', 'Code2', 'BookOpen', 'Check', 'Zap'];
+    const cleanHabits: Habit[] = chosenHabits.map((name, i) => {
+      const colors = ['#06b6d4', '#10b981', '#f59e0b', '#8b5cf6'];
       return {
-        id: 'hab_' + (i + 1),
+        id: 'hab_' + Date.now() + '_' + i,
         userId: user.id,
-        name: habitName,
-        icon: icons[i % icons.length],
+        name,
+        icon: 'Flame',
         color: colors[i % colors.length],
-        category: 'study',
+        category: 'discipline',
         frequency: 'daily',
         targetDaysPerWeek: 7,
         currentStreak: 0,
@@ -736,7 +618,7 @@ export const storage = {
       };
     });
 
-    // Create default starting deck and sample exam for onboarding
+    // Create default starting deck
     const initialDeck: FlashcardDeck = {
       id: 'deck_' + Date.now(),
       userId: user.id,
@@ -772,7 +654,6 @@ export const storage = {
     storage.setDecks([initialDeck]);
     storage.setFlashcards([initialCard]);
     storage.setExams([]);
-    storage.setGPACourses([]);
     storage.syncActiveUserAccount();
   },
 
@@ -789,7 +670,6 @@ export const storage = {
       decks: storage.getDecks(),
       flashcards: storage.getFlashcards(),
       exams: storage.getExams(),
-      gpaCourses: storage.getGPACourses(),
       exportedAt: new Date().toISOString()
     };
     return JSON.stringify(data, null, 2);
@@ -809,7 +689,6 @@ export const storage = {
       if (data.decks) storage.setDecks(data.decks);
       if (data.flashcards) storage.setFlashcards(data.flashcards);
       if (data.exams) storage.setExams(data.exams);
-      if (data.gpaCourses) storage.setGPACourses(data.gpaCourses);
       storage.syncActiveUserAccount();
       return true;
     } catch {

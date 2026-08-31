@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   FileText, 
   Upload, 
@@ -13,9 +13,11 @@ import {
   Layers, 
   BookOpen, 
   ExternalLink,
-  ChevronLeft,
-  ChevronRight,
-  Columns
+  FolderOpen,
+  FileUp,
+  X,
+  FileCheck,
+  HardDrive
 } from 'lucide-react';
 import { useStudy } from '../../context/StudyContext';
 
@@ -30,20 +32,14 @@ const SAMPLE_DOCS: SampleDoc[] = [
   {
     id: 'doc_dsa',
     title: 'MIT 6.006: Advanced Algorithms & Data Structures',
-    category: 'Computer Science',
+    category: 'MIT Algorithms',
     url: 'https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-fall-2011/resources/mit6_006f11_lec01.pdf'
   },
   {
     id: 'doc_ai',
-    title: 'Attention Is All You Need (Original Transformer Paper)',
-    category: 'AI & Machine Learning',
+    title: 'Attention Is All You Need (Transformer Paper)',
+    category: 'AI / Deep Learning',
     url: 'https://arxiv.org/pdf/1706.03762.pdf'
-  },
-  {
-    id: 'doc_chem',
-    title: 'Organic Chemistry Reaction Mechanisms Compendium',
-    category: 'Chemistry & Biology',
-    url: 'https://openstax.org/details/books/chemistry-2e'
   }
 ];
 
@@ -52,7 +48,6 @@ export const PDFReaderView: React.FC = () => {
     addNote, 
     addFlashcard, 
     decks, 
-    timerMode, 
     timeLeft, 
     isTimerRunning, 
     startTimer, 
@@ -61,9 +56,17 @@ export const PDFReaderView: React.FC = () => {
     triggerConfetti 
   } = useStudy();
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Document states
   const [activeDocUrl, setActiveDocUrl] = useState<string>(SAMPLE_DOCS[0].url);
+  const [localFileName, setLocalFileName] = useState<string | null>(null);
+  const [localFileSize, setLocalFileSize] = useState<string | null>(null);
+  const [isDragOver, setIsDragOver] = useState<boolean>(false);
   const [customPdfInput, setCustomPdfInput] = useState<string>('');
   const [zoomLevel, setZoomLevel] = useState<number>(100);
+
+  // Notes state
   const [noteTitle, setNoteTitle] = useState<string>('Lecture Synthesis & Key Theorems');
   const [noteContent, setNoteContent] = useState<string>(
     `# Lecture Notes: Core Theorems & Derivations\n\n- **Key Takeaway 1**: Asymptotic tight bounds provide invariant guarantees.\n- **Formula to remember**: T(n) = aT(n/b) + f(n)\n- **Action item**: Review Master Theorem case 2 before recitation.`
@@ -76,6 +79,42 @@ export const PDFReaderView: React.FC = () => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Handle Local File Selection
+  const handleFileUpload = (file: File) => {
+    if (!file || file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
+      alert('Please select a valid PDF file.');
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    setActiveDocUrl(objectUrl);
+    setLocalFileName(file.name);
+    
+    // Format size
+    const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
+    setLocalFileSize(`${sizeInMB} MB`);
+
+    setNoteTitle(`Notes on ${file.name.replace('.pdf', '')}`);
+    setSavedNotification(`Loaded local document: ${file.name}`);
+    setTimeout(() => setSavedNotification(null), 3000);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleFileUpload(file);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      handleFileUpload(file);
+    }
+  };
+
   const handleSaveNote = () => {
     if (!noteContent.trim()) return;
     addNote({
@@ -83,7 +122,7 @@ export const PDFReaderView: React.FC = () => {
       content: noteContent,
       category: 'Lecture',
       pinned: false,
-      tags: ['PDF Study', 'Lecture Slides']
+      tags: ['PDF Study', localFileName ? 'Local PDF' : 'Lecture Slides']
     });
 
     setSavedNotification('Saved to Notebook! 📝');
@@ -112,12 +151,23 @@ export const PDFReaderView: React.FC = () => {
     e.preventDefault();
     if (customPdfInput.trim()) {
       setActiveDocUrl(customPdfInput.trim());
+      setLocalFileName(null);
+      setLocalFileSize(null);
       setCustomPdfInput('');
     }
   };
 
   return (
     <div className="space-y-6 pb-16">
+      {/* Hidden Native File Input for Local PDFs */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept="application/pdf"
+        className="hidden"
+      />
+
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -125,21 +175,62 @@ export const PDFReaderView: React.FC = () => {
             SPLIT-SCREEN WORKSTATION
           </span>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-100 tracking-tight">
-            Lecture PDF & Slide Study Reader
+            Local PDF & Lecture Slide Reader
           </h1>
           <p className="text-xs sm:text-sm text-slate-400">
-            Read textbook chapters and slides side-by-side with an active note scratchpad and focus timer.
+            Open any PDF file directly from your computer side-by-side with an active note scratchpad and focus timer.
           </p>
         </div>
 
-        {/* Document Preset Selector */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        {/* Action Controls: Local File Open Button & Sample Presets */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white text-xs font-bold shadow-glow-cyan flex items-center gap-2 transition-all hover:scale-105"
+          >
+            <FolderOpen className="w-4 h-4" />
+            <span>Open Local PDF File</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Document Switcher Toolbar */}
+      <div className="p-4 rounded-3xl glass-panel border border-white/10 shadow-glass-3d flex flex-col sm:flex-row items-center justify-between gap-4">
+        {/* Active Document Status Indicator */}
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="w-10 h-10 rounded-2xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center border border-cyan-500/30 shrink-0">
+            {localFileName ? <HardDrive className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
+          </div>
+          <div className="truncate">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-100 truncate">
+                {localFileName || SAMPLE_DOCS.find(d => d.url === activeDocUrl)?.title || 'Custom PDF Document'}
+              </span>
+              {localFileName && (
+                <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.2 rounded border border-emerald-500/20 shrink-0">
+                  Local File ({localFileSize})
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-400 font-mono truncate">
+              {localFileName ? 'Loaded securely from your device storage' : 'Web lecture slide repository'}
+            </p>
+          </div>
+        </div>
+
+        {/* Quick Document Presets & URL Loader */}
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <span className="text-[11px] text-slate-400 font-mono hidden md:inline">Sample Slides:</span>
           {SAMPLE_DOCS.map((doc) => (
             <button
               key={doc.id}
-              onClick={() => setActiveDocUrl(doc.url)}
+              onClick={() => {
+                setActiveDocUrl(doc.url);
+                setLocalFileName(null);
+                setLocalFileSize(null);
+              }}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                activeDocUrl === doc.url
+                activeDocUrl === doc.url && !localFileName
                   ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 shadow-glow-cyan'
                   : 'bg-slate-900/80 text-slate-400 border border-white/10 hover:text-slate-200'
               }`}
@@ -150,35 +241,31 @@ export const PDFReaderView: React.FC = () => {
         </div>
       </div>
 
-      {/* Custom PDF Link Form */}
-      <form onSubmit={handleLoadCustomUrl} className="flex gap-2">
-        <input
-          type="url"
-          value={customPdfInput}
-          onChange={(e) => setCustomPdfInput(e.target.value)}
-          placeholder="Paste any PDF URL or open textbook link (e.g. https://.../lecture.pdf)..."
-          className="flex-1 px-4 py-2.5 rounded-2xl bg-slate-900/80 border border-white/10 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400"
-        />
-        <button
-          type="submit"
-          className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-xs shadow-glow-cyan flex items-center gap-1.5 transition-all hover:scale-105"
-        >
-          <Upload className="w-3.5 h-3.5" />
-          <span>Load Document</span>
-        </button>
-      </form>
-
-      {/* Main Split Screen Container */}
+      {/* Main Split Screen Workstation */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch min-h-[680px]">
-        {/* Left Column (7 cols): Document PDF Frame */}
-        <div className="lg:col-span-7 rounded-3xl glass-panel border border-white/10 shadow-glass-3d flex flex-col overflow-hidden bg-slate-950/80">
+        {/* Left Column (7 cols): Document PDF Frame & Drag-Drop Zone */}
+        <div 
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragOver(true);
+          }}
+          onDragLeave={() => setIsDragOver(false)}
+          onDrop={handleDrop}
+          className={`lg:col-span-7 rounded-3xl glass-panel border shadow-glass-3d flex flex-col overflow-hidden bg-slate-950/90 transition-all ${
+            isDragOver ? 'border-cyan-400 ring-2 ring-cyan-400/50 shadow-glow-cyan' : 'border-white/10'
+          }`}
+        >
           {/* Top PDF Controls Bar */}
           <div className="p-3.5 bg-slate-900/90 border-b border-white/10 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 truncate">
-              <FileText className="w-4 h-4 text-cyan-400 shrink-0" />
-              <span className="text-xs font-bold text-slate-200 truncate">
-                {SAMPLE_DOCS.find(d => d.url === activeDocUrl)?.title || 'Custom Study Document'}
-              </span>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 flex items-center gap-1.5 transition-colors"
+                title="Choose different PDF from device"
+              >
+                <FileUp className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Upload PDF</span>
+              </button>
             </div>
 
             <div className="flex items-center gap-1.5 shrink-0">
@@ -211,6 +298,12 @@ export const PDFReaderView: React.FC = () => {
 
           {/* Embedded Document Frame */}
           <div className="flex-1 w-full h-[600px] relative bg-slate-950 flex items-center justify-center">
+            {isDragOver && (
+              <div className="absolute inset-0 z-20 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center gap-3 text-cyan-400 font-bold animate-in fade-in">
+                <FileUp className="w-12 h-12 animate-bounce" />
+                <span>Drop your PDF here to read</span>
+              </div>
+            )}
             <iframe
               src={activeDocUrl}
               title="Lecture Document Viewer"
@@ -280,7 +373,7 @@ export const PDFReaderView: React.FC = () => {
                 rows={14}
                 value={noteContent}
                 onChange={(e) => setNoteContent(e.target.value)}
-                placeholder="Type formulas, bullet points, question notes while reading..."
+                placeholder="Type formulas, bullet points, theorem summaries while reading..."
                 className="w-full px-4 py-3 rounded-2xl bg-slate-900/90 border border-white/10 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-mono resize-none leading-relaxed"
               />
             </div>

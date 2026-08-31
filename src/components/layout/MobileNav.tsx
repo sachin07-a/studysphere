@@ -35,8 +35,6 @@ export const MobileNav: React.FC = () => {
 
   const moreTabs: { id: ActiveView; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
     { id: 'pdf-reader', label: 'PDF Reader', icon: FileSpreadsheet },
-    { id: 'gpa-calc', label: 'GPA Calc', icon: Calculator },
-    { id: 'study-room', label: 'Study Lobby', icon: Users },
     { id: 'habits', label: 'Habits', icon: Flame },
     { id: 'subjects', label: 'Subjects', icon: BookOpen },
     { id: 'goals', label: 'Goals', icon: Target },
