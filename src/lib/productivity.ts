@@ -23,6 +23,95 @@ export const getDailyQuote = () => {
   return MOTIVATIONAL_QUOTES[dayOfYear % MOTIVATIONAL_QUOTES.length];
 };
 
+/**
+ * Evaluates the student's unified daily unbroken streak across all dimensions:
+ * 1. Study Sessions logged
+ * 2. Habits checked off
+ * 3. Tasks completed
+ */
+export const calculateOverallStreak = (
+  sessions: StudySession[],
+  habits: Habit[],
+  tasks: Task[],
+  user?: UserProfile | null
+): { currentStreak: number; longestStreak: number; todayActive: boolean; activeDates: string[] } => {
+  const activeDateSet = new Set<string>();
+
+  // 1. Check sessions
+  sessions.forEach(s => {
+    if (s.date) {
+      activeDateSet.add(s.date);
+    } else if (s.startTime) {
+      activeDateSet.add(s.startTime.split('T')[0]);
+    }
+  });
+
+  // 2. Check habit completions
+  habits.forEach(h => {
+    if (h.completions) {
+      Object.entries(h.completions).forEach(([dateStr, isDone]) => {
+        if (isDone) {
+          activeDateSet.add(dateStr);
+        }
+      });
+    }
+  });
+
+  // 3. Check tasks completed
+  tasks.forEach(t => {
+    if (t.completed) {
+      if (t.completedAt) {
+        activeDateSet.add(t.completedAt.split('T')[0]);
+      } else if (t.dueDate) {
+        activeDateSet.add(t.dueDate);
+      }
+    }
+  });
+
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+  const todayActive = activeDateSet.has(todayStr);
+
+  const getDateOffset = (daysAgo: number): string => {
+    const d = new Date();
+    d.setDate(now.getDate() - daysAgo);
+    return d.toISOString().split('T')[0];
+  };
+
+  let currentStreak = 0;
+
+  if (todayActive) {
+    currentStreak = 1;
+    let day = 1;
+    while (activeDateSet.has(getDateOffset(day))) {
+      currentStreak++;
+      day++;
+    }
+  } else {
+    // If today is not completed yet, preserve yesterday's active streak pending today's study/tasks
+    const yesterdayStr = getDateOffset(1);
+    if (activeDateSet.has(yesterdayStr)) {
+      let day = 1;
+      while (activeDateSet.has(getDateOffset(day))) {
+        currentStreak++;
+        day++;
+      }
+    } else {
+      currentStreak = 0;
+    }
+  }
+
+  const previousLongest = user?.longestStreak || 0;
+  const longestStreak = Math.max(previousLongest, currentStreak);
+
+  return {
+    currentStreak,
+    longestStreak,
+    todayActive,
+    activeDates: Array.from(activeDateSet)
+  };
+};
+
 export const calculateProductivityScore = (
   user: UserProfile,
   sessions: StudySession[],
@@ -84,8 +173,8 @@ export const calculateProductivityScore = (
     tasksScore,
     habitsScore,
     consistencyScore,
-    comparisonYesterday: 14, // 14% higher than yesterday
-    comparisonWeeklyAvg: 18, // 18% higher than weekly average
+    comparisonYesterday: 14,
+    comparisonWeeklyAvg: 18,
     primaryRecommendation,
   };
 };

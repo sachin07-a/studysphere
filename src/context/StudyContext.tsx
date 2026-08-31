@@ -16,7 +16,7 @@ import {
 import { YouTubeTrack, CURATED_YOUTUBE_STATIONS, parseYouTubeVideoId } from '../types/music';
 import { storage } from '../lib/storage';
 import { soundEngine, AmbientType } from '../lib/audio';
-import { calculateProductivityScore, generateAIInsights } from '../lib/productivity';
+import { calculateProductivityScore, generateAIInsights, calculateOverallStreak } from '../lib/productivity';
 import { useAuth } from './AuthContext';
 
 export type ActiveView = 
@@ -126,7 +126,7 @@ interface StudyContextType {
 const StudyContext = createContext<StudyContextType | undefined>(undefined);
 
 export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, addXP } = useAuth();
+  const { user, addXP, updateProfile } = useAuth();
 
   const [activeView, setActiveView] = useState<ActiveView>('dashboard');
   const [isFocusMode, setIsFocusMode] = useState<boolean>(false);
@@ -177,6 +177,30 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // Ignored in test environments
     }
   }, []);
+
+  // Global Streak Synchronizer across Study Time, Tasks, and Habits
+  const syncStreak = useCallback((
+    currSessions: StudySession[] = sessions, 
+    currHabits: Habit[] = habits, 
+    currTasks: Task[] = tasks
+  ) => {
+    if (!user) return;
+    const { currentStreak, longestStreak } = calculateOverallStreak(currSessions, currHabits, currTasks, user);
+    if (user.streakCount !== currentStreak || user.longestStreak !== longestStreak) {
+      updateProfile({
+        streakCount: currentStreak,
+        longestStreak: longestStreak,
+        lastActiveDate: new Date().toISOString().split('T')[0]
+      });
+    }
+  }, [user, updateProfile, sessions, habits, tasks]);
+
+  // Sync on startup / user switch
+  useEffect(() => {
+    if (user) {
+      syncStreak(sessions, habits, tasks);
+    }
+  }, [user?.id]);
 
   // Keyboard shortcut Ctrl+K / Cmd+K for Quick Capture
   useEffect(() => {
@@ -290,11 +314,12 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     // Update Sessions
-    setSessions(prev => {
-      const updated = [newSession, ...prev];
-      storage.setSessions(updated);
-      return updated;
-    });
+    const updatedSessions = [newSession, ...sessions];
+    setSessions(updatedSessions);
+    storage.setSessions(updatedSessions);
+
+    // Sync streak with new study session!
+    syncStreak(updatedSessions, habits, tasks);
 
     // Update Subject Study Hours
     if (selectedSubjectId) {
@@ -431,17 +456,33 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             addXP(50);
           }
 
-          // Calculate current streak
+          // Calculate current streak for this specific habit
+          const now = new Date();
+          const todayKey = now.toISOString().split('T')[0];
           let streak = 0;
-          const today = new Date();
-          for (let i = 0; i < 365; i++) {
-            const checkDate = new Date();
-            checkDate.setDate(today.getDate() - i);
-            const key = checkDate.toISOString().split('T')[0];
-            if (completions[key]) {
+
+          const checkDateStr = (daysAgo: number) => {
+            const d = new Date();
+            d.setDate(now.getDate() - daysAgo);
+            return d.toISOString().split('T')[0];
+          };
+
+          if (completions[todayKey]) {
+            streak = 1;
+            let day = 1;
+            while (completions[checkDateStr(day)]) {
               streak++;
-            } else if (i > 0) {
-              break;
+              day++;
+            }
+          } else {
+            // Check if yesterday was completed to preserve streak
+            const yesterdayKey = checkDateStr(1);
+            if (completions[yesterdayKey]) {
+              let day = 1;
+              while (completions[checkDateStr(day)]) {
+                streak++;
+                day++;
+              }
             }
           }
 
@@ -458,6 +499,8 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       });
 
       storage.setHabits(updated);
+      // Sync global streak across all sessions, habits, and tasks
+      syncStreak(sessions, updated, tasks);
       return updated;
     });
   };
@@ -475,6 +518,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setHabits(prev => {
       const updated = [...prev, newHabit];
       storage.setHabits(updated);
+      syncStreak(sessions, updated, tasks);
       return updated;
     });
     addXP(75);
@@ -484,6 +528,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setHabits(prev => {
       const updated = prev.map(h => (h.id === id ? { ...h, ...partial } : h));
       storage.setHabits(updated);
+      syncStreak(sessions, updated, tasks);
       return updated;
     });
   };
@@ -492,6 +537,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setHabits(prev => {
       const updated = prev.filter(h => h.id !== id);
       storage.setHabits(updated);
+      syncStreak(sessions, updated, tasks);
       return updated;
     });
   };
@@ -507,6 +553,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setTasks(prev => {
       const updated = [newTask, ...prev];
       storage.setTasks(updated);
+      syncStreak(sessions, habits, updated);
       return updated;
     });
     addXP(30);
@@ -516,6 +563,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setTasks(prev => {
       const updated = prev.map(t => (t.id === id ? { ...t, ...partial } : t));
       storage.setTasks(updated);
+      syncStreak(sessions, habits, updated);
       return updated;
     });
   };
@@ -539,6 +587,8 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return t;
       });
       storage.setTasks(updated);
+      // Sync global streak across all sessions, habits, and tasks
+      syncStreak(sessions, habits, updated);
       return updated;
     });
   };
@@ -547,6 +597,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setTasks(prev => {
       const updated = prev.filter(t => t.id !== id);
       storage.setTasks(updated);
+      syncStreak(sessions, habits, updated);
       return updated;
     });
   };
