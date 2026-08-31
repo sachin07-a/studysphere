@@ -14,6 +14,7 @@ import { AuthView } from './components/auth/AuthView';
 import { OnboardingWizard } from './components/onboarding/OnboardingWizard';
 import { FloatingMusicDock } from './components/music/FloatingMusicDock';
 import { YouTubePlayerModal } from './components/music/YouTubePlayerModal';
+import { ReportCardModal } from './components/reports/ReportCardModal';
 
 // Feature Views
 import { DashboardView } from './components/dashboard/DashboardView';
@@ -27,10 +28,21 @@ import { CalendarView } from './components/calendar/CalendarView';
 import { NotesView } from './components/notes/NotesView';
 import { AchievementsView } from './components/achievements/AchievementsView';
 import { SettingsView } from './components/settings/SettingsView';
+import { FlashcardsView } from './components/flashcards/FlashcardsView';
+import { ExamsView } from './components/exams/ExamsView';
+import { PDFReaderView } from './components/pdf/PDFReaderView';
+import { GPACalculatorView } from './components/gpa/GPACalculatorView';
+import { StudyRoomView } from './components/community/StudyRoomView';
 
 const MainLayout: React.FC = () => {
   const { isAuthenticated, isOnboarded, isLoading } = useAuth();
-  const { activeView, isYouTubeModalOpen, setIsYouTubeModalOpen } = useStudy();
+  const { 
+    activeView, 
+    isYouTubeModalOpen, 
+    setIsYouTubeModalOpen,
+    isReportCardOpen,
+    setIsReportCardOpen
+  } = useStudy();
 
   if (isLoading) {
     return (
@@ -61,6 +73,16 @@ const MainLayout: React.FC = () => {
         return <DashboardView />;
       case 'timer':
         return <TimerView />;
+      case 'flashcards':
+        return <FlashcardsView />;
+      case 'exams':
+        return <ExamsView />;
+      case 'pdf-reader':
+        return <PDFReaderView />;
+      case 'gpa-calc':
+        return <GPACalculatorView />;
+      case 'study-room':
+        return <StudyRoomView />;
       case 'habits':
         return <HabitsView />;
       case 'tasks':
@@ -110,6 +132,10 @@ const MainLayout: React.FC = () => {
       <YouTubePlayerModal 
         isOpen={isYouTubeModalOpen} 
         onClose={() => setIsYouTubeModalOpen(false)} 
+      />
+      <ReportCardModal
+        isOpen={isReportCardOpen}
+        onClose={() => setIsReportCardOpen(false)}
       />
       <FocusModeModal />
       <QuickCaptureModal />

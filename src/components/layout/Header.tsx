@@ -7,11 +7,12 @@ import {
   Zap, 
   Bot, 
   Plus, 
-  Compass,
-  LogOut,
-  Sliders,
-  Music,
-  Radio
+  Compass, 
+  LogOut, 
+  Sliders, 
+  Music, 
+  Radio,
+  Award
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useStudy } from '../../context/StudyContext';
@@ -25,6 +26,7 @@ export const Header: React.FC = () => {
     setIsAIChatOpen,
     setActiveView,
     setIsYouTubeModalOpen,
+    setIsReportCardOpen,
     currentYouTubeTrack,
     isYouTubePlaying,
     activeAmbient
@@ -227,6 +229,17 @@ export const Header: React.FC = () => {
                 >
                   <Compass className="w-4 h-4 text-purple-400" />
                   <span>Achievements & XP</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setIsReportCardOpen(true);
+                    setShowProfileMenu(false);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-amber-300 hover:text-amber-200 hover:bg-amber-500/10 rounded-xl transition-colors"
+                >
+                  <Award className="w-4 h-4 text-amber-400" />
+                  <span>Weekly Report Card 📜</span>
                 </button>
 
                 <button

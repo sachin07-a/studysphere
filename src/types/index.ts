@@ -160,3 +160,87 @@ export interface ProductivityBreakdown {
   comparisonWeeklyAvg: number;
   primaryRecommendation: string;
 }
+
+// --- Active Recall & Spaced Repetition Types ---
+export interface FlashcardDeck {
+  id: string;
+  userId: string;
+  subjectId?: string;
+  subjectName: string;
+  title: string;
+  description: string;
+  color: string;
+  createdAt: string;
+}
+
+export interface Flashcard {
+  id: string;
+  deckId: string;
+  userId: string;
+  subjectId?: string;
+  front: string;
+  back: string;
+  tags: string[];
+  interval: number; // in days
+  repetition: number;
+  easeFactor: number; // default 2.5
+  dueDate: string; // YYYY-MM-DD
+  lastReviewedAt?: string;
+  createdAt: string;
+}
+
+// --- Exam Countdown & Syllabus Mastery Types ---
+export interface SyllabusUnit {
+  id: string;
+  name: string;
+  completed: boolean;
+  estimatedHours?: number;
+  notes?: string;
+}
+
+export interface Exam {
+  id: string;
+  userId: string;
+  subjectId: string;
+  subjectName: string;
+  title: string;
+  examDate: string; // YYYY-MM-DD
+  startTime?: string; // HH:MM
+  location?: string;
+  targetGrade?: string;
+  weightPercent: number; // e.g. 35%
+  syllabusUnits: SyllabusUnit[];
+  createdAt: string;
+}
+
+// --- GPA & Grade Simulator Types ---
+export interface CourseAssignment {
+  id: string;
+  name: string;
+  weight: number; // percentage (e.g. 20)
+  score: number; // achieved score (e.g. 88)
+  maxScore: number; // e.g. 100
+}
+
+export interface CourseGrade {
+  id: string;
+  userId: string;
+  courseName: string;
+  courseCode: string;
+  credits: number;
+  targetGrade: string; // A+, A, A-, B+, etc.
+  assignments: CourseAssignment[];
+}
+
+// --- Virtual Peer Lobby Types ---
+export interface StudyPeer {
+  id: string;
+  name: string;
+  avatar: string;
+  major: string;
+  currentSubject: string;
+  focusMinutesToday: number;
+  isStudying: boolean;
+  streak: number;
+  statusMessage?: string;
+}

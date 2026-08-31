@@ -12,7 +12,10 @@ import {
   BookOpen, 
   Calendar as CalendarIcon,
   ChevronRight,
-  Maximize2
+  Maximize2,
+  Brain,
+  Target,
+  Layers
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useStudy } from '../../context/StudyContext';
@@ -26,6 +29,8 @@ export const DashboardView: React.FC = () => {
     tasks, 
     habits, 
     subjects, 
+    flashcards,
+    exams,
     productivity, 
     aiInsights, 
     setActiveView, 
@@ -221,6 +226,67 @@ export const DashboardView: React.FC = () => {
             <span className="block text-[11px] text-emerald-400 font-mono mt-1 text-right">
               {completedHabitsCount === totalHabitsCount ? 'All Habits Done! 🌟' : `${totalHabitsCount - completedHabitsCount} remaining`}
             </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Launch High-Impact Banners: Exam Countdown & Flashcards Recall */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Flashcards SM-2 Review Prompt */}
+        <div 
+          onClick={() => setActiveView('flashcards')}
+          className="p-5 rounded-3xl glass-panel border border-cyan-500/30 bg-gradient-to-r from-cyan-950/20 via-slate-900/80 to-slate-900 shadow-glow-cyan flex items-center justify-between cursor-pointer group hover:scale-[1.01] transition-all"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 text-cyan-300 flex items-center justify-center border border-cyan-500/40 shrink-0 group-hover:scale-110 transition-transform">
+              <Brain className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-mono font-bold uppercase text-cyan-400 bg-cyan-500/10 px-2 py-0.2 rounded border border-cyan-500/20">
+                  SM-2 Active Recall
+                </span>
+              </div>
+              <h4 className="text-sm font-bold text-slate-100 mt-0.5 group-hover:text-cyan-300 transition-colors">
+                Daily Spaced Repetition Review
+              </h4>
+              <p className="text-[11px] text-slate-400">
+                {flashcards.filter(c => !c.dueDate || c.dueDate <= todayStr).length} cards due for recall today.
+              </p>
+            </div>
+          </div>
+
+          <div className="w-8 h-8 rounded-xl bg-cyan-500 text-slate-950 flex items-center justify-center shrink-0 font-bold group-hover:translate-x-1 transition-transform shadow-glow-cyan">
+            <ArrowRight className="w-4 h-4 stroke-[3]" />
+          </div>
+        </div>
+
+        {/* Exam Countdown Prompt */}
+        <div 
+          onClick={() => setActiveView('exams')}
+          className="p-5 rounded-3xl glass-panel border border-rose-500/30 bg-gradient-to-r from-rose-950/20 via-slate-900/80 to-slate-900 shadow-glow-rose flex items-center justify-between cursor-pointer group hover:scale-[1.01] transition-all"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/20 text-rose-300 flex items-center justify-center border border-rose-500/40 shrink-0 group-hover:scale-110 transition-transform">
+              <Target className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-mono font-bold uppercase text-rose-400 bg-rose-500/10 px-2 py-0.2 rounded border border-rose-500/20">
+                  Target Exam Roadmap
+                </span>
+              </div>
+              <h4 className="text-sm font-bold text-slate-100 mt-0.5 group-hover:text-rose-300 transition-colors">
+                {exams.length > 0 ? exams[0].title.slice(0, 30) + '...' : 'Schedule Upcoming Midterm'}
+              </h4>
+              <p className="text-[11px] text-slate-400">
+                {exams.length > 0 ? `Target: ${exams[0].targetGrade} • ${exams[0].examDate}` : 'Track countdown tickers and syllabus checklists.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="w-8 h-8 rounded-xl bg-rose-500 text-white flex items-center justify-center shrink-0 font-bold group-hover:translate-x-1 transition-transform shadow-glow-rose">
+            <ArrowRight className="w-4 h-4 stroke-[3]" />
           </div>
         </div>
       </div>

@@ -11,12 +11,19 @@ import {
   Achievement, 
   TimerMode,
   ProductivityBreakdown,
-  AIInsight
+  AIInsight,
+  FlashcardDeck,
+  Flashcard,
+  Exam,
+  SyllabusUnit,
+  CourseGrade,
+  StudyPeer
 } from '../types';
 import { YouTubeTrack, CURATED_YOUTUBE_STATIONS, parseYouTubeVideoId } from '../types/music';
-import { storage } from '../lib/storage';
+import { storage, INITIAL_PEERS } from '../lib/storage';
 import { soundEngine, AmbientType } from '../lib/audio';
 import { calculateProductivityScore, generateAIInsights, calculateOverallStreak } from '../lib/productivity';
+import { calculateSM2, ReviewRating } from '../lib/spacedRepetition';
 import { useAuth } from './AuthContext';
 
 export type ActiveView = 
@@ -30,7 +37,12 @@ export type ActiveView =
   | 'calendar'
   | 'notes'
   | 'achievements'
-  | 'settings';
+  | 'settings'
+  | 'flashcards'
+  | 'exams'
+  | 'pdf-reader'
+  | 'gpa-calc'
+  | 'study-room';
 
 interface StudyContextType {
   activeView: ActiveView;
@@ -63,6 +75,8 @@ interface StudyContextType {
   setIsQuickCaptureOpen: (val: boolean) => void;
   isAIChatOpen: boolean;
   setIsAIChatOpen: (val: boolean) => void;
+  isReportCardOpen: boolean;
+  setIsReportCardOpen: (val: boolean) => void;
 
   // Sound Engine (Procedural Ambient & Lo-Fi)
   activeAmbient: AmbientType | null;
@@ -91,6 +105,11 @@ interface StudyContextType {
   goals: Goal[];
   notes: Note[];
   achievements: Achievement[];
+  decks: FlashcardDeck[];
+  flashcards: Flashcard[];
+  exams: Exam[];
+  gpaCourses: CourseGrade[];
+  peers: StudyPeer[];
   productivity: ProductivityBreakdown;
   aiInsights: AIInsight[];
 
@@ -118,6 +137,25 @@ interface StudyContextType {
   togglePinNote: (id: string) => void;
   deleteNote: (id: string) => void;
 
+  // Flashcards CRUD & Spaced Repetition
+  addDeck: (deck: Omit<FlashcardDeck, 'id' | 'createdAt' | 'userId'>) => void;
+  deleteDeck: (deckId: string) => void;
+  addFlashcard: (card: Omit<Flashcard, 'id' | 'createdAt' | 'userId' | 'interval' | 'repetition' | 'easeFactor' | 'dueDate'>) => void;
+  updateFlashcard: (id: string, partial: Partial<Flashcard>) => void;
+  deleteFlashcard: (id: string) => void;
+  reviewFlashcard: (cardId: string, rating: ReviewRating) => void;
+
+  // Exams CRUD & Syllabus Units
+  addExam: (exam: Omit<Exam, 'id' | 'createdAt' | 'userId'>) => void;
+  updateExam: (id: string, partial: Partial<Exam>) => void;
+  deleteExam: (id: string) => void;
+  toggleSyllabusUnit: (examId: string, unitId: string) => void;
+
+  // GPA Courses CRUD
+  addGPACourse: (course: Omit<CourseGrade, 'id' | 'userId'>) => void;
+  updateGPACourse: (id: string, partial: Partial<CourseGrade>) => void;
+  deleteGPACourse: (id: string) => void;
+
   triggerConfetti: () => void;
   newAchievementUnlock: Achievement | null;
   dismissAchievementPopup: () => void;
@@ -132,6 +170,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isFocusMode, setIsFocusMode] = useState<boolean>(false);
   const [isQuickCaptureOpen, setIsQuickCaptureOpen] = useState<boolean>(false);
   const [isAIChatOpen, setIsAIChatOpen] = useState<boolean>(false);
+  const [isReportCardOpen, setIsReportCardOpen] = useState<boolean>(false);
 
   // Timer states
   const [timerMode, setTimerModeState] = useState<TimerMode>('pomodoro');
@@ -162,6 +201,11 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [goals, setGoals] = useState<Goal[]>(() => storage.getGoals());
   const [notes, setNotes] = useState<Note[]>(() => storage.getNotes());
   const [achievements, setAchievements] = useState<Achievement[]>(() => storage.getAchievements());
+  const [decks, setDecks] = useState<FlashcardDeck[]>(() => storage.getDecks());
+  const [flashcards, setFlashcards] = useState<Flashcard[]>(() => storage.getFlashcards());
+  const [exams, setExams] = useState<Exam[]>(() => storage.getExams());
+  const [gpaCourses, setGPACourses] = useState<CourseGrade[]>(() => storage.getGPACourses());
+  const [peers] = useState<StudyPeer[]>(INITIAL_PEERS);
   const [newAchievementUnlock, setNewAchievementUnlock] = useState<Achievement | null>(null);
 
   // Confetti trigger
@@ -358,7 +402,6 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       soundEngine.stopAmbient();
       setActiveAmbient(null);
     } else if (type) {
-      // Pause YouTube if ambient is started
       if (isYouTubePlaying) {
         setIsYouTubePlaying(false);
       }
@@ -377,7 +420,6 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // YouTube Lounge controls
   const playYouTubeTrack = (track: YouTubeTrack) => {
-    // Stop procedural ambient when playing YouTube
     if (activeAmbient) {
       soundEngine.stopAmbient();
       setActiveAmbient(null);
@@ -475,7 +517,6 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               day++;
             }
           } else {
-            // Check if yesterday was completed to preserve streak
             const yesterdayKey = checkDateStr(1);
             if (completions[yesterdayKey]) {
               let day = 1;
@@ -499,7 +540,6 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       });
 
       storage.setHabits(updated);
-      // Sync global streak across all sessions, habits, and tasks
       syncStreak(sessions, updated, tasks);
       return updated;
     });
@@ -587,7 +627,6 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return t;
       });
       storage.setTasks(updated);
-      // Sync global streak across all sessions, habits, and tasks
       syncStreak(sessions, habits, updated);
       return updated;
     });
@@ -676,11 +715,182 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   };
 
+  // --- Flashcards & Spaced Repetition CRUD ---
+  const addDeck = (deck: Omit<FlashcardDeck, 'id' | 'createdAt' | 'userId'>) => {
+    const newDeck: FlashcardDeck = {
+      ...deck,
+      id: 'deck_' + Date.now(),
+      userId: user?.id || 'usr_guest',
+      createdAt: new Date().toISOString(),
+    };
+    setDecks(prev => {
+      const updated = [...prev, newDeck];
+      storage.setDecks(updated);
+      return updated;
+    });
+    addXP(80);
+  };
+
+  const deleteDeck = (deckId: string) => {
+    setDecks(prev => {
+      const updated = prev.filter(d => d.id !== deckId);
+      storage.setDecks(updated);
+      return updated;
+    });
+    // Also remove flashcards in this deck
+    setFlashcards(prev => {
+      const updated = prev.filter(c => c.deckId !== deckId);
+      storage.setFlashcards(updated);
+      return updated;
+    });
+  };
+
+  const addFlashcard = (card: Omit<Flashcard, 'id' | 'createdAt' | 'userId' | 'interval' | 'repetition' | 'easeFactor' | 'dueDate'>) => {
+    const newCard: Flashcard = {
+      ...card,
+      id: 'card_' + Date.now(),
+      userId: user?.id || 'usr_guest',
+      interval: 1,
+      repetition: 0,
+      easeFactor: 2.5,
+      dueDate: new Date().toISOString().split('T')[0],
+      createdAt: new Date().toISOString(),
+    };
+    setFlashcards(prev => {
+      const updated = [newCard, ...prev];
+      storage.setFlashcards(updated);
+      return updated;
+    });
+    addXP(25);
+  };
+
+  const updateFlashcard = (id: string, partial: Partial<Flashcard>) => {
+    setFlashcards(prev => {
+      const updated = prev.map(c => (c.id === id ? { ...c, ...partial } : c));
+      storage.setFlashcards(updated);
+      return updated;
+    });
+  };
+
+  const deleteFlashcard = (id: string) => {
+    setFlashcards(prev => {
+      const updated = prev.filter(c => c.id !== id);
+      storage.setFlashcards(updated);
+      return updated;
+    });
+  };
+
+  const reviewFlashcard = (cardId: string, rating: ReviewRating) => {
+    setFlashcards(prev => {
+      const updated = prev.map(c => {
+        if (c.id === cardId) {
+          const result = calculateSM2(c, rating);
+          return {
+            ...c,
+            ...result,
+            lastReviewedAt: new Date().toISOString()
+          };
+        }
+        return c;
+      });
+      storage.setFlashcards(updated);
+      return updated;
+    });
+
+    // Reward XP based on recall effort
+    const xpMap: Record<ReviewRating, number> = { 1: 10, 2: 25, 3: 40, 4: 50 };
+    addXP(xpMap[rating] || 25);
+    if (rating >= 3) {
+      soundEngine.playSuccess();
+    }
+  };
+
+  // --- Exams & Syllabus CRUD ---
+  const addExam = (exam: Omit<Exam, 'id' | 'createdAt' | 'userId'>) => {
+    const newExam: Exam = {
+      ...exam,
+      id: 'exam_' + Date.now(),
+      userId: user?.id || 'usr_guest',
+      createdAt: new Date().toISOString(),
+    };
+    setExams(prev => {
+      const updated = [...prev, newExam];
+      storage.setExams(updated);
+      return updated;
+    });
+    addXP(100);
+  };
+
+  const updateExam = (id: string, partial: Partial<Exam>) => {
+    setExams(prev => {
+      const updated = prev.map(e => (e.id === id ? { ...e, ...partial } : e));
+      storage.setExams(updated);
+      return updated;
+    });
+  };
+
+  const deleteExam = (id: string) => {
+    setExams(prev => {
+      const updated = prev.filter(e => e.id !== id);
+      storage.setExams(updated);
+      return updated;
+    });
+  };
+
+  const toggleSyllabusUnit = (examId: string, unitId: string) => {
+    setExams(prev => {
+      const updated = prev.map(exam => {
+        if (exam.id === examId) {
+          const updatedUnits = exam.syllabusUnits.map(u => 
+            u.id === unitId ? { ...u, completed: !u.completed } : u
+          );
+          return { ...exam, syllabusUnits: updatedUnits };
+        }
+        return exam;
+      });
+      storage.setExams(updated);
+      return updated;
+    });
+    soundEngine.playSuccess();
+    triggerConfetti();
+    addXP(35);
+  };
+
+  // --- GPA Courses CRUD ---
+  const addGPACourse = (course: Omit<CourseGrade, 'id' | 'userId'>) => {
+    const newCourse: CourseGrade = {
+      ...course,
+      id: 'crs_' + Date.now(),
+      userId: user?.id || 'usr_guest',
+    };
+    setGPACourses(prev => {
+      const updated = [...prev, newCourse];
+      storage.setGPACourses(updated);
+      return updated;
+    });
+    addXP(50);
+  };
+
+  const updateGPACourse = (id: string, partial: Partial<CourseGrade>) => {
+    setGPACourses(prev => {
+      const updated = prev.map(c => (c.id === id ? { ...c, ...partial } : c));
+      storage.setGPACourses(updated);
+      return updated;
+    });
+  };
+
+  const deleteGPACourse = (id: string) => {
+    setGPACourses(prev => {
+      const updated = prev.filter(c => c.id !== id);
+      storage.setGPACourses(updated);
+      return updated;
+    });
+  };
+
   // Achievement unlock evaluator
   const checkAchievementsAfterSession = (sessionMinutes: number, rating: number) => {
     setAchievements(prev => {
       const updated = [...prev];
-      // 1. First focus session badge
       const firstSess = updated.find(a => a.code === 'FIRST_SESSION');
       if (firstSess && !firstSess.unlockedAt) {
         firstSess.unlockedAt = new Date().toISOString();
@@ -690,7 +900,6 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         soundEngine.playSuccess();
       }
 
-      // 2. High rating badge
       if (rating === 5) {
         const perf = updated.find(a => a.code === 'PERFECT_SCORE');
         if (perf && !perf.unlockedAt) {
@@ -770,6 +979,8 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setIsQuickCaptureOpen,
         isAIChatOpen,
         setIsAIChatOpen,
+        isReportCardOpen,
+        setIsReportCardOpen,
         activeAmbient,
         ambientVolume,
         setAmbientSound,
@@ -792,6 +1003,11 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         goals,
         notes,
         achievements,
+        decks,
+        flashcards,
+        exams,
+        gpaCourses,
+        peers,
         productivity,
         aiInsights,
         addSubject,
@@ -812,6 +1028,19 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         updateNote,
         togglePinNote,
         deleteNote,
+        addDeck,
+        deleteDeck,
+        addFlashcard,
+        updateFlashcard,
+        deleteFlashcard,
+        reviewFlashcard,
+        addExam,
+        updateExam,
+        deleteExam,
+        toggleSyllabusUnit,
+        addGPACourse,
+        updateGPACourse,
+        deleteGPACourse,
         triggerConfetti,
         newAchievementUnlock,
         dismissAchievementPopup,
