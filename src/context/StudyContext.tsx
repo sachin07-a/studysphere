@@ -13,8 +13,9 @@ import {
   ProductivityBreakdown,
   AIInsight
 } from '../types';
+import { YouTubeTrack, CURATED_YOUTUBE_STATIONS, parseYouTubeVideoId } from '../types/music';
 import { storage } from '../lib/storage';
-import { soundEngine } from '../lib/audio';
+import { soundEngine, AmbientType } from '../lib/audio';
 import { calculateProductivityScore, generateAIInsights } from '../lib/productivity';
 import { useAuth } from './AuthContext';
 
@@ -38,7 +39,7 @@ interface StudyContextType {
   // Timer State
   timerMode: TimerMode;
   setTimerMode: (mode: TimerMode) => void;
-  timerDuration: number; // in seconds
+  timerDuration: number;
   setTimerDuration: (dur: number) => void;
   timeLeft: number;
   setTimeLeft: (time: number) => void;
@@ -63,11 +64,24 @@ interface StudyContextType {
   isAIChatOpen: boolean;
   setIsAIChatOpen: (val: boolean) => void;
 
-  // Sound Engine
-  activeAmbient: 'rain' | 'forest' | 'cafe' | 'whitenoise' | 'binaural' | null;
+  // Sound Engine (Procedural Ambient & Lo-Fi)
+  activeAmbient: AmbientType | null;
   ambientVolume: number;
-  setAmbientSound: (type: 'rain' | 'forest' | 'cafe' | 'whitenoise' | 'binaural' | null) => void;
+  setAmbientSound: (type: AmbientType | null) => void;
   setAmbientVol: (vol: number) => void;
+
+  // YouTube Study Lounge
+  currentYouTubeTrack: YouTubeTrack | null;
+  isYouTubePlaying: boolean;
+  youTubeVolume: number;
+  isYouTubeModalOpen: boolean;
+  customYouTubeUrls: string[];
+  playYouTubeTrack: (track: YouTubeTrack) => void;
+  stopYouTubeTrack: () => void;
+  toggleYouTubePlayback: () => void;
+  setYouTubeVol: (vol: number) => void;
+  setIsYouTubeModalOpen: (open: boolean) => void;
+  addCustomYouTubeUrl: (url: string) => void;
 
   // Data Collections
   subjects: Subject[];
@@ -130,8 +144,15 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const timerIntervalRef = useRef<number | null>(null);
 
   // Ambient sound states
-  const [activeAmbient, setActiveAmbient] = useState<'rain' | 'forest' | 'cafe' | 'whitenoise' | 'binaural' | null>(null);
+  const [activeAmbient, setActiveAmbient] = useState<AmbientType | null>(null);
   const [ambientVolume, setAmbientVolume] = useState<number>(0.35);
+
+  // YouTube Study Lounge states
+  const [currentYouTubeTrack, setCurrentYouTubeTrack] = useState<YouTubeTrack | null>(null);
+  const [isYouTubePlaying, setIsYouTubePlaying] = useState<boolean>(false);
+  const [youTubeVolume, setYouTubeVolume] = useState<number>(0.7);
+  const [isYouTubeModalOpen, setIsYouTubeModalOpen] = useState<boolean>(false);
+  const [customYouTubeUrls, setCustomYouTubeUrls] = useState<string[]>(() => storage.getCustomYouTubeUrls());
 
   // Data states
   const [subjects, setSubjects] = useState<Subject[]>(() => storage.getSubjects());
@@ -248,38 +269,42 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       elapsedSeconds = timerDuration - timeLeft;
     }
 
-    const elapsedMinutes = Math.max(1, Math.round(elapsedSeconds / 60));
-    const targetSub = subjects.find(s => s.id === selectedSubjectId);
-    const subName = targetSub ? targetSub.name : 'General Study';
+    const durationMinutes = Math.max(1, Math.round(elapsedSeconds / 60));
+    const now = new Date();
+    const startTime = new Date(now.getTime() - durationMinutes * 60000);
+    const subject = subjects.find(s => s.id === selectedSubjectId);
 
     const newSession: StudySession = {
       id: 'sess_' + Date.now(),
-      userId: user?.id || 'usr_sachin_108',
+      userId: user?.id || 'usr_guest',
       subjectId: selectedSubjectId,
-      subjectName: subName,
-      topic: selectedTopic || 'Core Study Session',
-      durationMinutes: elapsedMinutes,
+      subjectName: subject?.name || 'General Study',
+      topic: selectedTopic || 'Self Study',
+      durationMinutes,
       mode: timerMode,
-      date: new Date().toISOString().split('T')[0],
-      startTime: new Date(Date.now() - elapsedSeconds * 1000).toISOString(),
-      endTime: new Date().toISOString(),
       productivityRating: rating,
       notes: sessionNotes,
+      startTime: startTime.toISOString(),
+      endTime: now.toISOString(),
+      date: now.toISOString().split('T')[0],
     };
 
-    const nextSessions = [newSession, ...sessions];
-    setSessions(nextSessions);
-    storage.setSessions(nextSessions);
+    // Update Sessions
+    setSessions(prev => {
+      const updated = [newSession, ...prev];
+      storage.setSessions(updated);
+      return updated;
+    });
 
-    // Update subject study time
+    // Update Subject Study Hours
     if (selectedSubjectId) {
       setSubjects(prev => {
         const updated = prev.map(s => {
           if (s.id === selectedSubjectId) {
             return {
               ...s,
-              completedMinutesThisWeek: s.completedMinutesThisWeek + elapsedMinutes,
-              totalStudyMinutes: s.totalStudyMinutes + elapsedMinutes,
+              completedMinutesThisWeek: s.completedMinutesThisWeek + durationMinutes,
+              totalStudyMinutes: s.totalStudyMinutes + durationMinutes,
             };
           }
           return s;
@@ -289,27 +314,34 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       });
     }
 
-    // Award XP: 10 XP per minute studied + 50 XP completion bonus
-    const xpEarned = elapsedMinutes * 10 + 50;
-    addXP(xpEarned);
+    // Award XP
+    const earnedXP = durationMinutes * 10 + rating * 15;
+    const { leveledUp, newLevel } = addXP(earnedXP);
+
+    if (leveledUp) {
+      triggerConfetti();
+      soundEngine.playSuccess();
+    }
 
     setSessionCount(prev => prev + 1);
-    soundEngine.playSuccess();
-    triggerConfetti();
-
-    // Reset timer
-    setIsTimerRunning(false);
-    setTimeLeft(timerMode === 'stopwatch' ? 0 : timerDuration);
+    checkAchievementsAfterSession(durationMinutes, rating);
   };
 
-  // Ambient sound handlers
-  const setAmbientSound = (type: 'rain' | 'forest' | 'cafe' | 'whitenoise' | 'binaural' | null) => {
-    if (type === activeAmbient || type === null) {
+  // Ambient sound controls
+  const setAmbientSound = (type: AmbientType | null) => {
+    if (type === activeAmbient) {
       soundEngine.stopAmbient();
       setActiveAmbient(null);
-    } else {
+    } else if (type) {
+      // Pause YouTube if ambient is started
+      if (isYouTubePlaying) {
+        setIsYouTubePlaying(false);
+      }
       soundEngine.startAmbient(type, ambientVolume);
       setActiveAmbient(type);
+    } else {
+      soundEngine.stopAmbient();
+      setActiveAmbient(null);
     }
   };
 
@@ -318,54 +350,139 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     soundEngine.setAmbientVolume(vol);
   };
 
-  // --- Habit Management ---
-  const toggleHabit = (habitId: string, targetDate?: string) => {
-    const today = targetDate || new Date().toISOString().split('T')[0];
-    soundEngine.playStreakFire();
+  // YouTube Lounge controls
+  const playYouTubeTrack = (track: YouTubeTrack) => {
+    // Stop procedural ambient when playing YouTube
+    if (activeAmbient) {
+      soundEngine.stopAmbient();
+      setActiveAmbient(null);
+    }
+    setCurrentYouTubeTrack(track);
+    setIsYouTubePlaying(true);
+  };
 
+  const stopYouTubeTrack = () => {
+    setIsYouTubePlaying(false);
+    setCurrentYouTubeTrack(null);
+  };
+
+  const toggleYouTubePlayback = () => {
+    setIsYouTubePlaying(prev => !prev);
+  };
+
+  const setYouTubeVol = (vol: number) => {
+    setYouTubeVolume(vol);
+  };
+
+  const addCustomYouTubeUrl = (url: string) => {
+    storage.saveCustomYouTubeUrl(url);
+    setCustomYouTubeUrls(storage.getCustomYouTubeUrls());
+  };
+
+  // Subjects CRUD
+  const addSubject = (sub: Omit<Subject, 'id' | 'createdAt' | 'completedMinutesThisWeek' | 'totalStudyMinutes'>) => {
+    const newSub: Subject = {
+      ...sub,
+      id: 'sub_' + Date.now(),
+      completedMinutesThisWeek: 0,
+      totalStudyMinutes: 0,
+      createdAt: new Date().toISOString(),
+    };
+    setSubjects(prev => {
+      const updated = [...prev, newSub];
+      storage.setSubjects(updated);
+      return updated;
+    });
+    addXP(100);
+  };
+
+  const updateSubject = (id: string, partial: Partial<Subject>) => {
+    setSubjects(prev => {
+      const updated = prev.map(s => (s.id === id ? { ...s, ...partial } : s));
+      storage.setSubjects(updated);
+      return updated;
+    });
+  };
+
+  const deleteSubject = (id: string) => {
+    setSubjects(prev => {
+      const updated = prev.filter(s => s.id !== id);
+      storage.setSubjects(updated);
+      return updated;
+    });
+  };
+
+  // Habits CRUD & Streak Engine
+  const toggleHabit = (habitId: string, dateStr?: string) => {
+    const targetDate = dateStr || new Date().toISOString().split('T')[0];
+    
     setHabits(prev => {
-      const updated = prev.map(h => {
-        if (h.id === habitId) {
-          const isDone = !!h.completions[today];
-          const newCompletions = { ...h.completions, [today]: !isDone };
-          const newStreak = !isDone ? h.currentStreak + 1 : Math.max(0, h.currentStreak - 1);
-          const newLongest = Math.max(h.longestStreak, newStreak);
+      const updated = prev.map(habit => {
+        if (habit.id === habitId) {
+          const completions = { ...(habit.completions || {}) };
+          const isCurrentlyDone = !!completions[targetDate];
+          
+          if (isCurrentlyDone) {
+            delete completions[targetDate];
+          } else {
+            completions[targetDate] = true;
+            soundEngine.playStreakFire();
+            triggerConfetti();
+            addXP(50);
+          }
+
+          // Calculate current streak
+          let streak = 0;
+          const today = new Date();
+          for (let i = 0; i < 365; i++) {
+            const checkDate = new Date();
+            checkDate.setDate(today.getDate() - i);
+            const key = checkDate.toISOString().split('T')[0];
+            if (completions[key]) {
+              streak++;
+            } else if (i > 0) {
+              break;
+            }
+          }
+
+          const longest = Math.max(habit.longestStreak || 0, streak);
 
           return {
-            ...h,
-            completions: newCompletions,
-            currentStreak: newStreak,
-            longestStreak: newLongest,
+            ...habit,
+            completions,
+            currentStreak: streak,
+            longestStreak: longest,
           };
         }
-        return h;
+        return habit;
       });
+
       storage.setHabits(updated);
       return updated;
     });
-
-    addXP(50);
   };
 
-  const addHabit = (habitData: Omit<Habit, 'id' | 'createdAt' | 'completions' | 'currentStreak' | 'longestStreak' | 'userId'>) => {
+  const addHabit = (habit: Omit<Habit, 'id' | 'createdAt' | 'completions' | 'currentStreak' | 'longestStreak' | 'userId'>) => {
     const newHabit: Habit = {
-      ...habitData,
+      ...habit,
       id: 'hab_' + Date.now(),
-      userId: user?.id || 'usr_sachin_108',
+      userId: user?.id || 'usr_guest',
       currentStreak: 0,
       longestStreak: 0,
       completions: {},
       createdAt: new Date().toISOString(),
     };
-    const updated = [newHabit, ...habits];
-    setHabits(updated);
-    storage.setHabits(updated);
-    soundEngine.playSuccess();
+    setHabits(prev => {
+      const updated = [...prev, newHabit];
+      storage.setHabits(updated);
+      return updated;
+    });
+    addXP(75);
   };
 
   const updateHabit = (id: string, partial: Partial<Habit>) => {
     setHabits(prev => {
-      const updated = prev.map(h => h.id === id ? { ...h, ...partial } : h);
+      const updated = prev.map(h => (h.id === id ? { ...h, ...partial } : h));
       storage.setHabits(updated);
       return updated;
     });
@@ -379,37 +496,39 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   };
 
-  // --- Task Management ---
-  const addTask = (taskData: Omit<Task, 'id' | 'createdAt' | 'userId'>) => {
+  // Tasks CRUD
+  const addTask = (task: Omit<Task, 'id' | 'createdAt' | 'userId'>) => {
     const newTask: Task = {
-      ...taskData,
-      id: 'task_' + Date.now(),
-      userId: user?.id || 'usr_sachin_108',
+      ...task,
+      id: 'tsk_' + Date.now(),
+      userId: user?.id || 'usr_guest',
       createdAt: new Date().toISOString(),
     };
-    const updated = [newTask, ...tasks];
-    setTasks(updated);
-    storage.setTasks(updated);
-    soundEngine.playSuccess();
+    setTasks(prev => {
+      const updated = [newTask, ...prev];
+      storage.setTasks(updated);
+      return updated;
+    });
+    addXP(30);
   };
 
   const updateTask = (id: string, partial: Partial<Task>) => {
     setTasks(prev => {
-      const updated = prev.map(t => t.id === id ? { ...t, ...partial } : t);
+      const updated = prev.map(t => (t.id === id ? { ...t, ...partial } : t));
       storage.setTasks(updated);
       return updated;
     });
   };
 
   const toggleTask = (taskId: string) => {
-    soundEngine.playSuccess();
     setTasks(prev => {
       const updated = prev.map(t => {
         if (t.id === taskId) {
           const nextCompleted = !t.completed;
           if (nextCompleted) {
+            soundEngine.playSuccess();
             triggerConfetti();
-            addXP(75);
+            addXP(60);
           }
           return {
             ...t,
@@ -432,54 +551,25 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   };
 
-  // --- Subject Management ---
-  const addSubject = (subData: Omit<Subject, 'id' | 'createdAt' | 'completedMinutesThisWeek' | 'totalStudyMinutes'>) => {
-    const newSub: Subject = {
-      ...subData,
-      id: 'sub_' + Date.now(),
-      completedMinutesThisWeek: 0,
-      totalStudyMinutes: 0,
-      createdAt: new Date().toISOString(),
-    };
-    const updated = [...subjects, newSub];
-    setSubjects(updated);
-    storage.setSubjects(updated);
-    soundEngine.playSuccess();
-  };
-
-  const updateSubject = (id: string, partial: Partial<Subject>) => {
-    setSubjects(prev => {
-      const updated = prev.map(s => s.id === id ? { ...s, ...partial } : s);
-      storage.setSubjects(updated);
-      return updated;
-    });
-  };
-
-  const deleteSubject = (id: string) => {
-    setSubjects(prev => {
-      const updated = prev.filter(s => s.id !== id);
-      storage.setSubjects(updated);
-      return updated;
-    });
-  };
-
-  // --- Goal Management ---
-  const addGoal = (goalData: Omit<Goal, 'id' | 'createdAt' | 'userId'>) => {
+  // Goals CRUD
+  const addGoal = (goal: Omit<Goal, 'id' | 'createdAt' | 'userId'>) => {
     const newGoal: Goal = {
-      ...goalData,
-      id: 'goal_' + Date.now(),
-      userId: user?.id || 'usr_sachin_108',
+      ...goal,
+      id: 'gol_' + Date.now(),
+      userId: user?.id || 'usr_guest',
       createdAt: new Date().toISOString(),
     };
-    const updated = [newGoal, ...goals];
-    setGoals(updated);
-    storage.setGoals(updated);
-    soundEngine.playSuccess();
+    setGoals(prev => {
+      const updated = [...prev, newGoal];
+      storage.setGoals(updated);
+      return updated;
+    });
+    addXP(100);
   };
 
   const updateGoal = (id: string, partial: Partial<Goal>) => {
     setGoals(prev => {
-      const updated = prev.map(g => g.id === id ? { ...g, ...partial } : g);
+      const updated = prev.map(g => (g.id === id ? { ...g, ...partial } : g));
       storage.setGoals(updated);
       return updated;
     });
@@ -493,24 +583,27 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   };
 
-  // --- Notes Management ---
-  const addNote = (noteData: Omit<Note, 'id' | 'createdAt' | 'updatedAt' | 'userId'>) => {
+  // Notes CRUD
+  const addNote = (note: Omit<Note, 'id' | 'createdAt' | 'updatedAt' | 'userId'>) => {
+    const now = new Date().toISOString();
     const newNote: Note = {
-      ...noteData,
-      id: 'note_' + Date.now(),
-      userId: user?.id || 'usr_sachin_108',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      ...note,
+      id: 'not_' + Date.now(),
+      userId: user?.id || 'usr_guest',
+      createdAt: now,
+      updatedAt: now,
     };
-    const updated = [newNote, ...notes];
-    setNotes(updated);
-    storage.setNotes(updated);
-    soundEngine.playSuccess();
+    setNotes(prev => {
+      const updated = [newNote, ...prev];
+      storage.setNotes(updated);
+      return updated;
+    });
+    addXP(40);
   };
 
   const updateNote = (id: string, partial: Partial<Note>) => {
     setNotes(prev => {
-      const updated = prev.map(n => n.id === id ? { ...n, ...partial, updatedAt: new Date().toISOString() } : n);
+      const updated = prev.map(n => (n.id === id ? { ...n, ...partial, updatedAt: new Date().toISOString() } : n));
       storage.setNotes(updated);
       return updated;
     });
@@ -518,7 +611,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const togglePinNote = (id: string) => {
     setNotes(prev => {
-      const updated = prev.map(n => n.id === id ? { ...n, pinned: !n.pinned } : n);
+      const updated = prev.map(n => (n.id === id ? { ...n, pinned: !n.pinned } : n));
       storage.setNotes(updated);
       return updated;
     });
@@ -528,6 +621,37 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setNotes(prev => {
       const updated = prev.filter(n => n.id !== id);
       storage.setNotes(updated);
+      return updated;
+    });
+  };
+
+  // Achievement unlock evaluator
+  const checkAchievementsAfterSession = (sessionMinutes: number, rating: number) => {
+    setAchievements(prev => {
+      const updated = [...prev];
+      // 1. First focus session badge
+      const firstSess = updated.find(a => a.code === 'FIRST_SESSION');
+      if (firstSess && !firstSess.unlockedAt) {
+        firstSess.unlockedAt = new Date().toISOString();
+        firstSess.progress = 100;
+        setNewAchievementUnlock(firstSess);
+        triggerConfetti();
+        soundEngine.playSuccess();
+      }
+
+      // 2. High rating badge
+      if (rating === 5) {
+        const perf = updated.find(a => a.code === 'PERFECT_SCORE');
+        if (perf && !perf.unlockedAt) {
+          perf.unlockedAt = new Date().toISOString();
+          perf.progress = 100;
+          setNewAchievementUnlock(perf);
+          triggerConfetti();
+          soundEngine.playSuccess();
+        }
+      }
+
+      storage.setAchievements(updated);
       return updated;
     });
   };
@@ -599,6 +723,17 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         ambientVolume,
         setAmbientSound,
         setAmbientVol,
+        currentYouTubeTrack,
+        isYouTubePlaying,
+        youTubeVolume,
+        isYouTubeModalOpen,
+        customYouTubeUrls,
+        playYouTubeTrack,
+        stopYouTubeTrack,
+        toggleYouTubePlayback,
+        setYouTubeVol,
+        setIsYouTubeModalOpen,
+        addCustomYouTubeUrl,
         subjects,
         sessions,
         habits,

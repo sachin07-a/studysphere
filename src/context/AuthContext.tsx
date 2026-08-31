@@ -8,10 +8,12 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isOnboarded: boolean;
   isLoading: boolean;
-  login: (email: string, pass: string) => Promise<boolean>;
-  signup: (name: string, email: string, pass: string) => Promise<boolean>;
+  authError: string | null;
+  login: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
+  signup: (name: string, email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   loginAsGuest: () => void;
   logout: () => void;
+  clearAuthError: () => void;
   updateProfile: (updated: Partial<UserProfile>) => void;
   completeOnboarding: (
     data: { name: string; major: string; dailyGoalMinutes: number },
@@ -27,6 +29,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isOnboarded, setIsOnboarded] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     const savedUser = storage.getUser();
@@ -43,54 +46,65 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(false);
   }, []);
 
-  const login = async (email: string): Promise<boolean> => {
-    const existing = storage.getUser();
-    const activeUser: UserProfile = existing || {
-      id: 'usr_' + Date.now(),
-      name: email.split('@')[0].replace('.', ' ').toUpperCase(),
-      email,
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
-      major: 'Computer Science',
-      academicYear: 'Freshman',
-      level: 1,
-      xp: 0,
-      dailyGoalMinutes: 240,
-      streakCount: 0,
-      longestStreak: 0,
-      lastActiveDate: new Date().toISOString().split('T')[0],
-      createdAt: new Date().toISOString(),
-    };
-
-    setUser(activeUser);
-    storage.setUser(activeUser);
-    storage.setAuthToken('token_' + Date.now());
-    const onboarded = storage.isOnboarded();
-    setIsOnboarded(onboarded);
-    return true;
+  const clearAuthError = () => {
+    setAuthError(null);
   };
 
-  const signup = async (name: string, email: string): Promise<boolean> => {
-    const newUser: UserProfile = {
-      id: 'usr_' + Date.now(),
-      name,
-      email,
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
-      major: 'Computer Science',
-      academicYear: 'Freshman',
-      level: 1,
-      xp: 0,
-      dailyGoalMinutes: 240,
-      streakCount: 0, // Clean 0 streak for new users!
-      longestStreak: 0,
-      lastActiveDate: new Date().toISOString().split('T')[0],
-      createdAt: new Date().toISOString(),
-    };
-    setUser(newUser);
-    storage.setUser(newUser);
-    storage.setAuthToken('token_' + Date.now());
-    storage.setOnboarded(false);
-    setIsOnboarded(false);
-    return true;
+  const login = async (email: string, pass: string): Promise<{ success: boolean; error?: string }> => {
+    setAuthError(null);
+    if (!email || !pass) {
+      const err = 'Please enter both email and password.';
+      setAuthError(err);
+      return { success: false, error: err };
+    }
+
+    const res = await storage.authenticateUserAccount(email, pass);
+    if (!res.success) {
+      setAuthError(res.error || 'Authentication failed.');
+      return { success: false, error: res.error };
+    }
+
+    if (res.user) {
+      setUser(res.user);
+      const onboarded = storage.isOnboarded();
+      setIsOnboarded(onboarded);
+      return { success: true };
+    }
+
+    return { success: false, error: 'Unknown authentication error' };
+  };
+
+  const signup = async (name: string, email: string, pass: string): Promise<{ success: boolean; error?: string }> => {
+    setAuthError(null);
+    if (!name.trim()) {
+      const err = 'Please provide your full name.';
+      setAuthError(err);
+      return { success: false, error: err };
+    }
+    if (!email.trim() || !email.includes('@')) {
+      const err = 'Please enter a valid email address.';
+      setAuthError(err);
+      return { success: false, error: err };
+    }
+    if (pass.length < 4) {
+      const err = 'Password must be at least 4 characters long.';
+      setAuthError(err);
+      return { success: false, error: err };
+    }
+
+    const res = await storage.registerUserAccount(name, email, pass);
+    if (!res.success) {
+      setAuthError(res.error || 'Account creation failed.');
+      return { success: false, error: res.error };
+    }
+
+    if (res.user) {
+      setUser(res.user);
+      setIsOnboarded(false);
+      return { success: true };
+    }
+
+    return { success: false, error: 'Unknown signup error' };
   };
 
   const loginAsGuest = () => {
@@ -100,6 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    storage.syncActiveUserAccount();
     storage.setAuthToken(null);
     setUser(null);
     setIsOnboarded(false);
@@ -159,10 +174,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!user && !!storage.getAuthToken(),
         isOnboarded,
         isLoading,
+        authError,
         login,
         signup,
         loginAsGuest,
         logout,
+        clearAuthError,
         updateProfile,
         completeOnboarding,
         addXP,

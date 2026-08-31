@@ -12,6 +12,8 @@ import { AIChatbotDrawer } from './components/layout/AIChatbotDrawer';
 import { FocusModeModal } from './components/timer/FocusModeModal';
 import { AuthView } from './components/auth/AuthView';
 import { OnboardingWizard } from './components/onboarding/OnboardingWizard';
+import { FloatingMusicDock } from './components/music/FloatingMusicDock';
+import { YouTubePlayerModal } from './components/music/YouTubePlayerModal';
 
 // Feature Views
 import { DashboardView } from './components/dashboard/DashboardView';
@@ -28,7 +30,7 @@ import { SettingsView } from './components/settings/SettingsView';
 
 const MainLayout: React.FC = () => {
   const { isAuthenticated, isOnboarded, isLoading } = useAuth();
-  const { activeView } = useStudy();
+  const { activeView, isYouTubeModalOpen, setIsYouTubeModalOpen } = useStudy();
 
   if (isLoading) {
     return (
@@ -101,7 +103,14 @@ const MainLayout: React.FC = () => {
       {/* Floating Bottom Mobile Nav */}
       <MobileNav />
 
+      {/* Persistent Floating Audio / YouTube Player Dock */}
+      <FloatingMusicDock />
+
       {/* Global Modals & Drawers */}
+      <YouTubePlayerModal 
+        isOpen={isYouTubeModalOpen} 
+        onClose={() => setIsYouTubeModalOpen(false)} 
+      />
       <FocusModeModal />
       <QuickCaptureModal />
       <AIChatbotDrawer />

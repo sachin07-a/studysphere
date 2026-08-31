@@ -9,7 +9,9 @@ import {
   Plus, 
   Compass,
   LogOut,
-  Sliders
+  Sliders,
+  Music,
+  Radio
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useStudy } from '../../context/StudyContext';
@@ -21,7 +23,11 @@ export const Header: React.FC = () => {
     productivity, 
     setIsQuickCaptureOpen, 
     setIsAIChatOpen,
-    setActiveView 
+    setActiveView,
+    setIsYouTubeModalOpen,
+    currentYouTubeTrack,
+    isYouTubePlaying,
+    activeAmbient
   } = useStudy();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -39,6 +45,8 @@ export const Header: React.FC = () => {
     else if (theme === 'light') setTheme('dark');
     else setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
   };
+
+  const isAudioActive = isYouTubePlaying || !!activeAmbient;
 
   return (
     <header className="sticky top-0 z-30 w-full glass-panel border-b border-white/10 px-4 lg:px-8 py-3.5 flex items-center justify-between transition-all">
@@ -113,7 +121,27 @@ export const Header: React.FC = () => {
       </div>
 
       {/* Action Controls & User Profile Menu */}
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-2">
+        {/* YouTube & Lo-Fi Lounge Trigger */}
+        <button
+          onClick={() => setIsYouTubeModalOpen(true)}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
+            isAudioActive
+              ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 shadow-glow-rose font-bold'
+              : 'bg-slate-800/80 hover:bg-slate-700/80 border-white/10 text-slate-300 hover:text-white'
+          }`}
+          title="Open Lo-Fi Music & YouTube Study Lounge"
+        >
+          {isAudioActive ? (
+            <Radio className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
+          ) : (
+            <Music className="w-3.5 h-3.5 text-rose-400" />
+          )}
+          <span className="hidden sm:inline">
+            {currentYouTubeTrack ? currentYouTubeTrack.title.split('-')[0].slice(0, 12) + '...' : 'Lo-Fi Hub'}
+          </span>
+        </button>
+
         {/* Quick Capture Button */}
         <button
           onClick={() => setIsQuickCaptureOpen(true)}

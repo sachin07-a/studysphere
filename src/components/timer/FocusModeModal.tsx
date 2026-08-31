@@ -6,17 +6,21 @@ import {
   RotateCcw, 
   CheckCircle, 
   Volume2, 
-  VolumeX, 
   Sparkles,
   CloudRain,
   Trees,
   Coffee,
   Radio,
-  Headphones
+  Headphones,
+  Disc,
+  Zap,
+  Music2
 } from 'lucide-react';
 import { useStudy } from '../../context/StudyContext';
 import { Timer3DRing } from '../3d/Timer3DRing';
 import { getDailyQuote } from '../../lib/productivity';
+import { AmbientType } from '../../lib/audio';
+import { YouTubeIcon } from '../../types/music';
 
 export const FocusModeModal: React.FC = () => {
   const { 
@@ -36,7 +40,11 @@ export const FocusModeModal: React.FC = () => {
     activeAmbient,
     ambientVolume,
     setAmbientSound,
-    setAmbientVol
+    setAmbientVol,
+    currentYouTubeTrack,
+    isYouTubePlaying,
+    toggleYouTubePlayback,
+    setIsYouTubeModalOpen
   } = useStudy();
 
   if (!isFocusMode) return null;
@@ -54,12 +62,14 @@ export const FocusModeModal: React.FC = () => {
     ? (timeLeft % 3600) / 3600
     : timerDuration > 0 ? (timerDuration - timeLeft) / timerDuration : 0;
 
-  const ambientOptions = [
-    { type: 'rain' as const, label: 'Rain', icon: CloudRain },
-    { type: 'forest' as const, label: 'Forest', icon: Trees },
-    { type: 'cafe' as const, label: 'Café', icon: Coffee },
-    { type: 'whitenoise' as const, label: 'Space Noise', icon: Radio },
-    { type: 'binaural' as const, label: '40Hz Gamma', icon: Headphones },
+  const ambientOptions: { type: AmbientType; label: string; icon: React.FC<{ className?: string }> }[] = [
+    { type: 'lofi', label: 'Lo-Fi', icon: Disc },
+    { type: 'rain', label: 'Rain', icon: CloudRain },
+    { type: 'synthwave', label: 'Synthwave', icon: Zap },
+    { type: 'forest', label: 'Forest', icon: Trees },
+    { type: 'piano', label: 'Piano', icon: Music2 },
+    { type: 'cafe', label: 'Café', icon: Coffee },
+    { type: 'binaural', label: '40Hz', icon: Headphones },
   ];
 
   return (
@@ -83,6 +93,26 @@ export const FocusModeModal: React.FC = () => {
             </h2>
           </div>
         </div>
+
+        {/* YouTube Now Playing Pill in Zen Mode */}
+        {currentYouTubeTrack && (
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-950/40 border border-rose-500/30 text-xs text-rose-300">
+            <YouTubeIcon className="w-4 h-4 text-rose-400" />
+            <span className="font-semibold truncate max-w-[160px]">{currentYouTubeTrack.title}</span>
+            <button
+              onClick={toggleYouTubePlayback}
+              className="p-1 rounded-full bg-rose-500/30 hover:bg-rose-500 text-white transition-colors ml-1"
+            >
+              {isYouTubePlaying ? <Pause className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current" />}
+            </button>
+            <button
+              onClick={() => setIsYouTubeModalOpen(true)}
+              className="text-[10px] underline text-rose-400 hover:text-rose-200"
+            >
+              Change
+            </button>
+          </div>
+        )}
 
         <button
           onClick={() => setIsFocusMode(false)}
@@ -165,7 +195,7 @@ export const FocusModeModal: React.FC = () => {
       {/* Bottom Bar: Ambient Audio Player & Daily Motivation */}
       <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4 pt-4 border-t border-white/10">
         {/* Ambient Soundscape Controller */}
-        <div className="flex items-center gap-2 bg-slate-900/80 p-1.5 rounded-2xl border border-white/10">
+        <div className="flex flex-wrap items-center gap-2 bg-slate-900/80 p-1.5 rounded-2xl border border-white/10">
           {ambientOptions.map((opt) => {
             const Icon = opt.icon;
             const isActive = activeAmbient === opt.type;
@@ -185,6 +215,14 @@ export const FocusModeModal: React.FC = () => {
             );
           })}
 
+          <button
+            onClick={() => setIsYouTubeModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-rose-400 hover:text-rose-200 hover:bg-rose-500/10 border border-rose-500/20 transition-all"
+          >
+            <YouTubeIcon className="w-3.5 h-3.5" />
+            <span>YouTube Hub</span>
+          </button>
+
           {activeAmbient && (
             <div className="flex items-center gap-2 px-2 border-l border-white/10">
               <Volume2 className="w-3.5 h-3.5 text-cyan-400" />
@@ -195,7 +233,7 @@ export const FocusModeModal: React.FC = () => {
                 step="0.05"
                 value={ambientVolume}
                 onChange={(e) => setAmbientVol(parseFloat(e.target.value))}
-                className="w-16 h-1 bg-slate-700 rounded-lg cursor-pointer"
+                className="w-16 h-1 bg-slate-700 rounded-lg cursor-pointer accent-cyan-400"
               />
             </div>
           )}
