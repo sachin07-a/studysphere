@@ -68,6 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(res.user);
       const onboarded = storage.isOnboarded();
       setIsOnboarded(onboarded);
+      window.location.reload();
       return { success: true };
     }
 
@@ -101,6 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (res.user) {
       setUser(res.user);
       setIsOnboarded(false);
+      window.location.reload();
       return { success: true };
     }
 
@@ -111,6 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     storage.loadDemoData();
     setUser(INITIAL_USER);
     setIsOnboarded(true);
+    window.location.reload();
   };
 
   const logout = () => {
@@ -118,6 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     storage.setAuthToken(null);
     setUser(null);
     setIsOnboarded(false);
+    window.location.reload();
   };
 
   const updateProfile = (updated: Partial<UserProfile>) => {
