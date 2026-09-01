@@ -152,6 +152,71 @@ interface StudyContextType {
 
 const StudyContext = createContext<StudyContextType | undefined>(undefined);
 
+interface PersistedTimer {
+  timerMode: TimerMode;
+  timerDuration: number;
+  timeLeft: number;
+  isTimerRunning: boolean;
+  targetEndTime: number | null;
+  stopwatchStartTime: number | null;
+  selectedSubjectId: string;
+  selectedTopic: string;
+  savedAt: number;
+}
+
+const getSavedTimer = (): PersistedTimer | null => {
+  try {
+    const data = localStorage.getItem('studysphere_active_timer');
+    if (!data) return null;
+    return JSON.parse(data);
+  } catch {
+    return null;
+  }
+};
+
+const initialSaved = getSavedTimer();
+let initTimerMode: TimerMode = 'pomodoro';
+let initTimerDuration = 25 * 60;
+let initTimeLeft = 25 * 60;
+let initIsRunning = false;
+let initTargetEndTime: number | null = null;
+let initStopwatchStartTime: number | null = null;
+let initSelectedSubjectId = 'sub_dsa';
+let initSelectedTopic = 'Dynamic Programming & Tree Traversal';
+
+if (initialSaved) {
+  initTimerMode = initialSaved.timerMode || 'pomodoro';
+  initTimerDuration = initialSaved.timerDuration || 25 * 60;
+  initSelectedSubjectId = initialSaved.selectedSubjectId || 'sub_dsa';
+  initSelectedTopic = initialSaved.selectedTopic || 'Dynamic Programming & Tree Traversal';
+
+  if (initialSaved.isTimerRunning) {
+    if (initTimerMode === 'stopwatch') {
+      if (initialSaved.stopwatchStartTime) {
+        const elapsed = Math.floor((Date.now() - initialSaved.stopwatchStartTime) / 1000);
+        initTimeLeft = Math.max(0, elapsed);
+        initIsRunning = true;
+        initStopwatchStartTime = initialSaved.stopwatchStartTime;
+      }
+    } else {
+      if (initialSaved.targetEndTime) {
+        const diffMs = initialSaved.targetEndTime - Date.now();
+        const remaining = Math.ceil(diffMs / 1000);
+        if (remaining > 0) {
+          initTimeLeft = remaining;
+          initIsRunning = true;
+          initTargetEndTime = initialSaved.targetEndTime;
+        } else {
+          initTimeLeft = 0;
+          initIsRunning = false;
+        }
+      }
+    }
+  } else {
+    initTimeLeft = typeof initialSaved.timeLeft === 'number' ? initialSaved.timeLeft : initTimerDuration;
+  }
+}
+
 export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, addXP, updateProfile } = useAuth();
 
@@ -161,19 +226,47 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isAIChatOpen, setIsAIChatOpen] = useState<boolean>(false);
   const [isReportCardOpen, setIsReportCardOpen] = useState<boolean>(false);
 
-  // Timer states
-  const [timerMode, setTimerModeState] = useState<TimerMode>('pomodoro');
-  const [timerDuration, setTimerDuration] = useState<number>(25 * 60);
-  const [timeLeft, setTimeLeft] = useState<number>(25 * 60);
-  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
-  const [selectedSubjectId, setSelectedSubjectId] = useState<string>('sub_dsa');
-  const [selectedTopic, setSelectedTopic] = useState<string>('Dynamic Programming & Tree Traversal');
+  // Timer states (Hydrated seamlessly from localStorage across browser refreshes)
+  const [timerMode, setTimerModeState] = useState<TimerMode>(initTimerMode);
+  const [timerDuration, setTimerDuration] = useState<number>(initTimerDuration);
+  const [timeLeft, setTimeLeft] = useState<number>(initTimeLeft);
+  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(initIsRunning);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>(initSelectedSubjectId);
+  const [selectedTopic, setSelectedTopic] = useState<string>(initSelectedTopic);
   const [sessionCount, setSessionCount] = useState<number>(3);
   
-  // Real-time timestamp refs to prevent background tab throttling inaccuracies
+  // Real-time timestamp refs to prevent background tab throttling inaccuracies & maintain state across reloads
   const timerIntervalRef = useRef<number | null>(null);
-  const timerTargetEndTimeRef = useRef<number | null>(null);
-  const stopwatchStartTimeRef = useRef<number | null>(null);
+  const timerTargetEndTimeRef = useRef<number | null>(initTargetEndTime);
+  const stopwatchStartTimeRef = useRef<number | null>(initStopwatchStartTime);
+
+  // Helper to persist timer snapshot
+  const persistTimerSnapshot = useCallback((
+    running: boolean,
+    mode: TimerMode,
+    duration: number,
+    time: number,
+    targetEnd: number | null,
+    stopwatchStart: number | null,
+    subId = selectedSubjectId,
+    topic = selectedTopic
+  ) => {
+    try {
+      localStorage.setItem('studysphere_active_timer', JSON.stringify({
+        timerMode: mode,
+        timerDuration: duration,
+        timeLeft: time,
+        isTimerRunning: running,
+        targetEndTime: targetEnd,
+        stopwatchStartTime: stopwatchStart,
+        selectedSubjectId: subId,
+        selectedTopic: topic,
+        savedAt: Date.now()
+      }));
+    } catch {
+      // Ignore
+    }
+  }, [selectedSubjectId, selectedTopic]);
 
   // Ambient sound states
   const [activeAmbient, setActiveAmbient] = useState<AmbientType | null>(null);
@@ -255,22 +348,29 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsTimerRunning(false);
     timerTargetEndTimeRef.current = null;
     stopwatchStartTimeRef.current = null;
+
+    let newDur = 25 * 60;
+    let newTime = 25 * 60;
     if (mode === 'pomodoro') {
-      setTimerDuration(25 * 60);
-      setTimeLeft(25 * 60);
+      newDur = 25 * 60;
+      newTime = 25 * 60;
     } else if (mode === 'short_break') {
-      setTimerDuration(5 * 60);
-      setTimeLeft(5 * 60);
+      newDur = 5 * 60;
+      newTime = 5 * 60;
     } else if (mode === 'long_break') {
-      setTimerDuration(15 * 60);
-      setTimeLeft(15 * 60);
+      newDur = 15 * 60;
+      newTime = 15 * 60;
     } else if (mode === 'custom') {
-      setTimerDuration(45 * 60);
-      setTimeLeft(45 * 60);
+      newDur = 45 * 60;
+      newTime = 45 * 60;
     } else if (mode === 'stopwatch') {
-      setTimerDuration(0);
-      setTimeLeft(0);
+      newDur = 0;
+      newTime = 0;
     }
+
+    setTimerDuration(newDur);
+    setTimeLeft(newTime);
+    persistTimerSnapshot(false, mode, newDur, newTime, null, null);
   };
 
   // Timestamp Reconciliation Function
@@ -289,6 +389,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           setTimeLeft(0);
           setIsTimerRunning(false);
           timerTargetEndTimeRef.current = null;
+          localStorage.removeItem('studysphere_active_timer');
           soundEngine.playTimerCompletion();
           triggerConfetti();
           finishSession(5, 'Completed standard timer duration.');
@@ -330,6 +431,25 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, [isTimerRunning, syncTimerToRealTime]);
 
+  // Preserve state on window reload / unload
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (isTimerRunning) {
+        persistTimerSnapshot(
+          true,
+          timerMode,
+          timerDuration,
+          timeLeft,
+          timerTargetEndTimeRef.current,
+          stopwatchStartTimeRef.current
+        );
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isTimerRunning, timerMode, timerDuration, timeLeft, persistTimerSnapshot]);
+
   // Live Browser Tab Title Synchronization
   useEffect(() => {
     if (isTimerRunning) {
@@ -345,31 +465,41 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const startTimer = () => {
     soundEngine.playClick();
+    let targetEnd: number | null = null;
+    let stopwatchStart: number | null = null;
+
     if (timerMode === 'stopwatch') {
-      stopwatchStartTimeRef.current = Date.now() - (timeLeft * 1000);
+      stopwatchStart = Date.now() - (timeLeft * 1000);
+      stopwatchStartTimeRef.current = stopwatchStart;
     } else {
-      timerTargetEndTimeRef.current = Date.now() + (timeLeft * 1000);
+      targetEnd = Date.now() + (timeLeft * 1000);
+      timerTargetEndTimeRef.current = targetEnd;
     }
     setIsTimerRunning(true);
+    persistTimerSnapshot(true, timerMode, timerDuration, timeLeft, targetEnd, stopwatchStart);
   };
 
   const pauseTimer = () => {
     soundEngine.playClick();
     setIsTimerRunning(false);
+    let currentTime = timeLeft;
+
     if (timerMode === 'stopwatch') {
       if (stopwatchStartTimeRef.current) {
-        const elapsed = Math.floor((Date.now() - stopwatchStartTimeRef.current) / 1000);
-        setTimeLeft(Math.max(0, elapsed));
+        currentTime = Math.max(0, Math.floor((Date.now() - stopwatchStartTimeRef.current) / 1000));
+        setTimeLeft(currentTime);
       }
     } else {
       if (timerTargetEndTimeRef.current) {
         const diffMs = timerTargetEndTimeRef.current - Date.now();
-        const remaining = Math.max(0, Math.ceil(diffMs / 1000));
-        setTimeLeft(remaining);
+        currentTime = Math.max(0, Math.ceil(diffMs / 1000));
+        setTimeLeft(currentTime);
       }
     }
+
     timerTargetEndTimeRef.current = null;
     stopwatchStartTimeRef.current = null;
+    persistTimerSnapshot(false, timerMode, timerDuration, currentTime, null, null);
   };
 
   const resetTimer = () => {
@@ -377,6 +507,8 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsTimerRunning(false);
     timerTargetEndTimeRef.current = null;
     stopwatchStartTimeRef.current = null;
+    localStorage.removeItem('studysphere_active_timer');
+
     if (timerMode === 'stopwatch') {
       setTimeLeft(0);
     } else {
@@ -388,6 +520,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const finishSession = (rating = 5, sessionNotes = '') => {
     timerTargetEndTimeRef.current = null;
     stopwatchStartTimeRef.current = null;
+    localStorage.removeItem('studysphere_active_timer');
 
     let elapsedSeconds = 0;
     if (timerMode === 'stopwatch') {
