@@ -169,7 +169,11 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('sub_dsa');
   const [selectedTopic, setSelectedTopic] = useState<string>('Dynamic Programming & Tree Traversal');
   const [sessionCount, setSessionCount] = useState<number>(3);
+  
+  // Real-time timestamp refs to prevent background tab throttling inaccuracies
   const timerIntervalRef = useRef<number | null>(null);
+  const timerTargetEndTimeRef = useRef<number | null>(null);
+  const stopwatchStartTimeRef = useRef<number | null>(null);
 
   // Ambient sound states
   const [activeAmbient, setActiveAmbient] = useState<AmbientType | null>(null);
@@ -249,6 +253,8 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const setTimerMode = (mode: TimerMode) => {
     setTimerModeState(mode);
     setIsTimerRunning(false);
+    timerTargetEndTimeRef.current = null;
+    stopwatchStartTimeRef.current = null;
     if (mode === 'pomodoro') {
       setTimerDuration(25 * 60);
       setTimeLeft(25 * 60);
@@ -267,47 +273,110 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  // Timer Tick
+  // Timestamp Reconciliation Function
+  const syncTimerToRealTime = useCallback(() => {
+    if (timerMode === 'stopwatch') {
+      if (stopwatchStartTimeRef.current) {
+        const elapsed = Math.floor((Date.now() - stopwatchStartTimeRef.current) / 1000);
+        setTimeLeft(Math.max(0, elapsed));
+      }
+    } else {
+      if (timerTargetEndTimeRef.current) {
+        const diffMs = timerTargetEndTimeRef.current - Date.now();
+        const remaining = Math.max(0, Math.ceil(diffMs / 1000));
+        
+        if (remaining <= 0) {
+          setTimeLeft(0);
+          setIsTimerRunning(false);
+          timerTargetEndTimeRef.current = null;
+          soundEngine.playTimerCompletion();
+          triggerConfetti();
+          finishSession(5, 'Completed standard timer duration.');
+        } else {
+          setTimeLeft(remaining);
+        }
+      }
+    }
+  }, [timerMode]);
+
+  // Timer Tick Interval
   useEffect(() => {
     if (isTimerRunning) {
+      // 500ms precision sync to guarantee responsiveness even during browser micro-throttling
       timerIntervalRef.current = window.setInterval(() => {
-        if (timerMode === 'stopwatch') {
-          setTimeLeft(prev => prev + 1);
-        } else {
-          setTimeLeft(prev => {
-            if (prev <= 1) {
-              clearInterval(timerIntervalRef.current!);
-              setIsTimerRunning(false);
-              soundEngine.playTimerCompletion();
-              triggerConfetti();
-              finishSession(5, 'Completed standard timer duration.');
-              return 0;
-            }
-            return prev - 1;
-          });
-        }
-      }, 1000);
+        syncTimerToRealTime();
+      }, 500);
     } else {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     }
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
-  }, [isTimerRunning, timerMode]);
+  }, [isTimerRunning, syncTimerToRealTime]);
+
+  // Tab Visibility Change & Window Focus Synchronization (Solves Background Inaccuracy)
+  useEffect(() => {
+    const handleVisibilityOrFocus = () => {
+      if (isTimerRunning) {
+        syncTimerToRealTime();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+    };
+  }, [isTimerRunning, syncTimerToRealTime]);
+
+  // Live Browser Tab Title Synchronization
+  useEffect(() => {
+    if (isTimerRunning) {
+      const mins = Math.floor(timeLeft / 60);
+      const secs = timeLeft % 60;
+      const formatted = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      const icon = timerMode === 'stopwatch' ? '⏱️' : '⏳';
+      document.title = `${icon} (${formatted}) StudySphere Focus`;
+    } else {
+      document.title = 'StudySphere - 3D Student Platform';
+    }
+  }, [isTimerRunning, timeLeft, timerMode]);
 
   const startTimer = () => {
     soundEngine.playClick();
+    if (timerMode === 'stopwatch') {
+      stopwatchStartTimeRef.current = Date.now() - (timeLeft * 1000);
+    } else {
+      timerTargetEndTimeRef.current = Date.now() + (timeLeft * 1000);
+    }
     setIsTimerRunning(true);
   };
 
   const pauseTimer = () => {
     soundEngine.playClick();
     setIsTimerRunning(false);
+    if (timerMode === 'stopwatch') {
+      if (stopwatchStartTimeRef.current) {
+        const elapsed = Math.floor((Date.now() - stopwatchStartTimeRef.current) / 1000);
+        setTimeLeft(Math.max(0, elapsed));
+      }
+    } else {
+      if (timerTargetEndTimeRef.current) {
+        const diffMs = timerTargetEndTimeRef.current - Date.now();
+        const remaining = Math.max(0, Math.ceil(diffMs / 1000));
+        setTimeLeft(remaining);
+      }
+    }
+    timerTargetEndTimeRef.current = null;
+    stopwatchStartTimeRef.current = null;
   };
 
   const resetTimer = () => {
     soundEngine.playClick();
     setIsTimerRunning(false);
+    timerTargetEndTimeRef.current = null;
+    stopwatchStartTimeRef.current = null;
     if (timerMode === 'stopwatch') {
       setTimeLeft(0);
     } else {
@@ -317,6 +386,9 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Session Logging
   const finishSession = (rating = 5, sessionNotes = '') => {
+    timerTargetEndTimeRef.current = null;
+    stopwatchStartTimeRef.current = null;
+
     let elapsedSeconds = 0;
     if (timerMode === 'stopwatch') {
       elapsedSeconds = timeLeft;
