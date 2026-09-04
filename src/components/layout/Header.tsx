@@ -12,11 +12,12 @@ import {
   Sliders, 
   Music, 
   Radio,
-  Award
+  Award,
+  Palette
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useStudy } from '../../context/StudyContext';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme, THEME_CONFIGS } from '../../context/ThemeContext';
 
 export const Header: React.FC = () => {
   const { user, logout } = useAuth();
@@ -31,7 +32,7 @@ export const Header: React.FC = () => {
     isYouTubePlaying,
     activeAmbient
   } = useStudy();
-  const { theme, setTheme, resolvedTheme } = useTheme();
+  const { theme, setIsThemeModalOpen } = useTheme();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   if (!user) return null;
@@ -42,11 +43,7 @@ export const Header: React.FC = () => {
   const xpRequiredForNext = 1000;
   const levelProgressPercent = Math.min(100, Math.round((xpInCurrentLevel / xpRequiredForNext) * 100));
 
-  const toggleTheme = () => {
-    if (theme === 'dark') setTheme('light');
-    else if (theme === 'light') setTheme('dark');
-    else setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
-  };
+  const activeThemeConfig = THEME_CONFIGS.find(t => t.id === theme) || THEME_CONFIGS[0];
 
   const isAudioActive = isYouTubePlaying || !!activeAmbient;
 
@@ -168,17 +165,16 @@ export const Header: React.FC = () => {
           <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-cyan-400 rounded-full" />
         </button>
 
-        {/* Theme Switcher */}
+        {/* Theme Studio Switcher Trigger */}
         <button
-          onClick={toggleTheme}
-          className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/10 text-slate-300 hover:text-white transition-all"
-          title={`Switch to ${resolvedTheme === 'dark' ? 'Light' : 'Dark'} Mode`}
+          onClick={() => setIsThemeModalOpen(true)}
+          className="flex items-center gap-1.5 p-2 px-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/10 text-slate-300 hover:text-white transition-all hover:scale-105"
+          title={`Active Theme: ${activeThemeConfig.name} (${activeThemeConfig.subtitle}) - Click to Customize`}
         >
-          {resolvedTheme === 'dark' ? (
-            <Sun className="w-4 h-4 text-amber-300" />
-          ) : (
-            <Moon className="w-4 h-4 text-indigo-400" />
-          )}
+          <span className="text-sm">{activeThemeConfig.icon}</span>
+          <span className="hidden lg:inline text-[11px] font-mono font-semibold">
+            {activeThemeConfig.name}
+          </span>
         </button>
 
         {/* User Profile Avatar with dropdown */}

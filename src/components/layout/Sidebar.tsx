@@ -19,9 +19,11 @@ import {
   Calculator,
   Users,
   ScrollText,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Palette
 } from 'lucide-react';
 import { useStudy, ActiveView } from '../../context/StudyContext';
+import { useTheme } from '../../context/ThemeContext';
 
 interface NavItem {
   id: ActiveView;
@@ -43,6 +45,7 @@ export const Sidebar: React.FC = () => {
     setIsFocusMode,
     setIsReportCardOpen
   } = useStudy();
+  const { setIsThemeModalOpen } = useTheme();
   
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
 
@@ -183,8 +186,17 @@ export const Sidebar: React.FC = () => {
         )}
       </div>
 
-      {/* Collapse / Expand Toggle Button */}
-      <div className="p-3 border-t border-white/10 flex items-center justify-end">
+      {/* Bottom Action Controls: Theme Studio & Collapse / Expand Toggle */}
+      <div className="p-3 border-t border-white/10 flex items-center justify-between">
+        <button
+          onClick={() => setIsThemeModalOpen(true)}
+          className="p-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-cyan-400 hover:text-cyan-300 transition-colors border border-white/5 flex items-center gap-1.5"
+          title="Customize Theme Studio (Liquid-Glass, Glassmorphism, Minimalism, Skeuomorphism)"
+        >
+          <Palette className="w-4 h-4" />
+          {!isCollapsed && <span className="text-[11px] font-mono font-medium text-slate-300">Theme</span>}
+        </button>
+
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="p-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-400 hover:text-slate-200 transition-colors border border-white/5"

@@ -15,6 +15,7 @@ import { OnboardingWizard } from './components/onboarding/OnboardingWizard';
 import { FloatingMusicDock } from './components/music/FloatingMusicDock';
 import { YouTubePlayerModal } from './components/music/YouTubePlayerModal';
 import { ReportCardModal } from './components/reports/ReportCardModal';
+import { ThemeSelectorModal } from './components/layout/ThemeSelectorModal';
 
 // Feature Views
 import { DashboardView } from './components/dashboard/DashboardView';
@@ -101,7 +102,7 @@ const MainLayout: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#070a13] text-slate-100 flex flex-col relative bg-radial-mesh">
+    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-primary)] flex flex-col relative bg-radial-mesh transition-colors duration-300">
       {/* Top Header */}
       <Header />
 
@@ -131,6 +132,7 @@ const MainLayout: React.FC = () => {
         isOpen={isReportCardOpen}
         onClose={() => setIsReportCardOpen(false)}
       />
+      <ThemeSelectorModal />
       <FocusModeModal />
       <QuickCaptureModal />
       <AIChatbotDrawer />

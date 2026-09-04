@@ -15,7 +15,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme, THEME_CONFIGS } from '../../context/ThemeContext';
 import { storage } from '../../lib/storage';
 import { useStudy } from '../../context/StudyContext';
 
@@ -176,47 +176,74 @@ export const SettingsView: React.FC = () => {
 
       {/* 2. Theme & UI Appearance */}
       <div className="rounded-3xl glass-panel p-6 sm:p-8 border border-white/10 shadow-glass-3d space-y-6">
-        <div className="flex items-center gap-2 pb-3 border-b border-white/10">
-          <Sliders className="w-5 h-5 text-purple-400" />
-          <h2 className="text-base font-bold text-slate-100">Theme & UI Appearance</h2>
+        <div className="flex items-center justify-between pb-3 border-b border-white/10">
+          <div className="flex items-center gap-2">
+            <Sliders className="w-5 h-5 text-purple-400" />
+            <div>
+              <h2 className="text-base font-bold text-slate-100">Theme & UI Appearance</h2>
+              <p className="text-xs text-slate-400">Choose your sensory workspace styling</p>
+            </div>
+          </div>
+          <span className="text-xs font-mono font-bold text-cyan-400">
+            5 Styles Available
+          </span>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 max-w-md">
-          <button
-            onClick={() => setTheme('dark')}
-            className={`p-3 rounded-2xl border flex flex-col items-center gap-2 transition-all ${
-              theme === 'dark'
-                ? 'bg-purple-500/20 border-purple-400 text-purple-300 shadow-glow-purple font-bold'
-                : 'bg-slate-900/60 border-white/5 text-slate-400 hover:text-white'
-            }`}
-          >
-            <Moon className="w-5 h-5" />
-            <span className="text-xs">Dark 3D (Default)</span>
-          </button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+          {THEME_CONFIGS.map((config) => {
+            const isSelected = theme === config.id;
+            return (
+              <button
+                key={config.id}
+                type="button"
+                onClick={() => {
+                  setTheme(config.id);
+                  triggerConfetti();
+                }}
+                className={`p-4 rounded-2xl border text-left flex flex-col justify-between transition-all duration-200 relative group ${
+                  isSelected
+                    ? 'border-cyan-400 shadow-glow-cyan bg-cyan-500/15 ring-2 ring-cyan-400/30'
+                    : 'bg-slate-900/60 border-white/5 text-slate-300 hover:border-white/20 hover:bg-slate-900/90'
+                }`}
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl p-1.5 rounded-xl bg-slate-800/80 border border-white/10">
+                      {config.icon}
+                    </span>
+                    {isSelected && (
+                      <span className="flex items-center gap-1 text-[10px] font-bold font-mono text-cyan-300 bg-cyan-500/20 px-2 py-0.5 rounded-full border border-cyan-500/30">
+                        <Check className="w-3 h-3 stroke-[3]" />
+                        <span>ACTIVE</span>
+                      </span>
+                    )}
+                  </div>
 
-          <button
-            onClick={() => setTheme('light')}
-            className={`p-3 rounded-2xl border flex flex-col items-center gap-2 transition-all ${
-              theme === 'light'
-                ? 'bg-purple-500/20 border-purple-400 text-purple-300 shadow-glow-purple font-bold'
-                : 'bg-slate-900/60 border-white/5 text-slate-400 hover:text-white'
-            }`}
-          >
-            <Sun className="w-5 h-5" />
-            <span className="text-xs">Light Modern</span>
-          </button>
+                  <div>
+                    <h3 className="text-sm font-extrabold text-slate-100">{config.name}</h3>
+                    <p className="text-[11px] font-mono text-cyan-400">{config.subtitle}</p>
+                  </div>
 
-          <button
-            onClick={() => setTheme('system')}
-            className={`p-3 rounded-2xl border flex flex-col items-center gap-2 transition-all ${
-              theme === 'system'
-                ? 'bg-purple-500/20 border-purple-400 text-purple-300 shadow-glow-purple font-bold'
-                : 'bg-slate-900/60 border-white/5 text-slate-400 hover:text-white'
-            }`}
-          >
-            <Sparkles className="w-5 h-5" />
-            <span className="text-xs">System Auto</span>
-          </button>
+                  <p className="text-[11px] text-slate-400 leading-snug">
+                    {config.description}
+                  </p>
+                </div>
+
+                <div className="mt-3 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-slate-500">
+                  <span className="flex items-center gap-1.5">
+                    <span 
+                      className="w-2 h-2 rounded-full shrink-0" 
+                      style={{ backgroundColor: config.accentColor }} 
+                    />
+                    <span>{config.badge}</span>
+                  </span>
+                  <span className={isSelected ? 'text-cyan-300 font-bold' : 'group-hover:text-slate-300'}>
+                    {isSelected ? 'Selected' : 'Apply'}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
