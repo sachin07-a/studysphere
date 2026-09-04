@@ -15,13 +15,13 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useTheme, THEME_CONFIGS } from '../../context/ThemeContext';
+import { useTheme, THEME_CONFIGS, ACCENT_CONFIGS } from '../../context/ThemeContext';
 import { storage } from '../../lib/storage';
 import { useStudy } from '../../context/StudyContext';
 
 export const SettingsView: React.FC = () => {
   const { user, updateProfile } = useAuth();
-  const { theme, setTheme } = useTheme();
+  const { theme, accent, setTheme, setAccent } = useTheme();
   const { triggerConfetti } = useStudy();
 
   const [name, setName] = useState(user?.name || '');
@@ -244,6 +244,66 @@ export const SettingsView: React.FC = () => {
               </button>
             );
           })}
+        </div>
+
+        {/* 2B. Vibrant Accent Color Palettes */}
+        <div className="pt-4 border-t border-white/10 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider font-mono">
+                Vibrant Accent Color Palettes
+              </h3>
+              <p className="text-[11px] text-slate-400">Personalize neon glows, buttons, and gradient highlights</p>
+            </div>
+            <span className="text-[11px] font-mono text-slate-400">6 Radiant Schemes</span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {ACCENT_CONFIGS.map((acc) => {
+              const isSelected = accent === acc.id;
+              return (
+                <button
+                  key={acc.id}
+                  type="button"
+                  onClick={() => {
+                    setAccent(acc.id);
+                    triggerConfetti();
+                  }}
+                  className={`p-3 rounded-2xl border text-left flex flex-col items-center justify-between gap-2 transition-all duration-200 group relative ${
+                    isSelected
+                      ? 'border-white shadow-lg ring-2 ring-white/40 scale-105 bg-slate-900/90'
+                      : 'border-white/10 hover:border-white/20 bg-slate-900/50 hover:bg-slate-900/80 hover:scale-102'
+                  }`}
+                  style={{
+                    borderColor: isSelected ? acc.primary : undefined,
+                    boxShadow: isSelected ? `0 0 20px -5px ${acc.glow}` : undefined,
+                  }}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-lg">{acc.icon}</span>
+                    {isSelected && (
+                      <span className="w-3.5 h-3.5 rounded-full bg-white text-slate-950 flex items-center justify-center text-[9px] font-bold">
+                        ✓
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Gradient Color Swatch */}
+                  <div
+                    className="w-full h-2.5 rounded-full shadow-inner"
+                    style={{
+                      background: `linear-gradient(135deg, ${acc.primary}, ${acc.secondary})`,
+                    }}
+                  />
+
+                  <div className="text-center w-full">
+                    <span className="text-xs font-bold text-slate-100 block truncate">{acc.name}</span>
+                    <span className="text-[9px] font-mono text-slate-400 block truncate">{acc.subtitle}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 

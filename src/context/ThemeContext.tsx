@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 export type ThemeMode = 'glassmorphism' | 'liquid-glass' | 'minimalism' | 'skeuomorphism' | 'light';
+export type AccentColor = 'cyan' | 'purple' | 'emerald' | 'amber' | 'rose' | 'gold';
 
 export interface ThemeConfig {
   id: ThemeMode;
@@ -13,12 +14,23 @@ export interface ThemeConfig {
   badge: string;
 }
 
+export interface AccentConfig {
+  id: AccentColor;
+  name: string;
+  subtitle: string;
+  primary: string;
+  secondary: string;
+  gradient: string;
+  glow: string;
+  icon: string;
+}
+
 export const THEME_CONFIGS: ThemeConfig[] = [
   {
     id: 'glassmorphism',
     name: 'Glassmorphism',
     subtitle: 'Cyberpunk Frosted Glass',
-    description: 'Frosted translucent glass, neon cyan highlights, glowing depth shadows, and cosmic space navy backdrops.',
+    description: 'Frosted translucent glass, neon border highlights, glowing depth shadows, and cosmic space navy backdrops.',
     icon: '🌌',
     accentColor: '#06b6d4',
     gradient: 'from-cyan-500 to-indigo-600',
@@ -66,9 +78,74 @@ export const THEME_CONFIGS: ThemeConfig[] = [
   }
 ];
 
+export const ACCENT_CONFIGS: AccentConfig[] = [
+  {
+    id: 'cyan',
+    name: 'Cyber Cyan',
+    subtitle: 'Electric Blue & Ice',
+    primary: '#06b6d4',
+    secondary: '#6366f1',
+    gradient: 'from-cyan-400 via-sky-500 to-indigo-500',
+    glow: 'rgba(6, 182, 212, 0.45)',
+    icon: '🌊'
+  },
+  {
+    id: 'purple',
+    name: 'Cosmic Violet',
+    subtitle: 'Radiant Magenta & Nebula',
+    primary: '#d946ef',
+    secondary: '#8b5cf6',
+    gradient: 'from-fuchsia-400 via-purple-500 to-indigo-500',
+    glow: 'rgba(217, 70, 239, 0.45)',
+    icon: '🔮'
+  },
+  {
+    id: 'emerald',
+    name: 'Emerald Matrix',
+    subtitle: 'Bioluminescent Neon Mint',
+    primary: '#10b981',
+    secondary: '#06b6d4',
+    gradient: 'from-emerald-400 via-teal-500 to-cyan-500',
+    glow: 'rgba(16, 185, 129, 0.45)',
+    icon: '🍃'
+  },
+  {
+    id: 'amber',
+    name: 'Solar Amber',
+    subtitle: 'Warm Sunset & Energy',
+    primary: '#f59e0b',
+    secondary: '#f43f5e',
+    gradient: 'from-amber-400 via-orange-500 to-rose-500',
+    glow: 'rgba(245, 158, 11, 0.45)',
+    icon: '🔥'
+  },
+  {
+    id: 'rose',
+    name: 'Sakura Rose',
+    subtitle: 'Lofi Pastel & Neo Pink',
+    primary: '#f43f5e',
+    secondary: '#c084fc',
+    gradient: 'from-rose-400 via-pink-500 to-purple-400',
+    glow: 'rgba(244, 63, 94, 0.45)',
+    icon: '🌸'
+  },
+  {
+    id: 'gold',
+    name: 'Electric Gold',
+    subtitle: 'Cyber Honey & Crown',
+    primary: '#eab308',
+    secondary: '#ea580c',
+    gradient: 'from-yellow-400 via-amber-500 to-orange-600',
+    glow: 'rgba(234, 179, 8, 0.45)',
+    icon: '⚡'
+  }
+];
+
 interface ThemeContextType {
   theme: ThemeMode;
+  accent: AccentColor;
   setTheme: (theme: ThemeMode) => void;
+  setAccent: (accent: AccentColor) => void;
   cycleTheme: () => void;
   isThemeModalOpen: boolean;
   setIsThemeModalOpen: (open: boolean) => void;
@@ -82,9 +159,16 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (saved && ['glassmorphism', 'liquid-glass', 'minimalism', 'skeuomorphism', 'light'].includes(saved)) {
       return saved;
     }
-    // Backward compatibility for legacy 'dark'
     if (saved === ('dark' as any)) return 'glassmorphism';
     return 'glassmorphism';
+  });
+
+  const [accent, setAccentState] = useState<AccentColor>(() => {
+    const saved = localStorage.getItem('studysphere_accent') as AccentColor;
+    if (saved && ['cyan', 'purple', 'emerald', 'amber', 'rose', 'gold'].includes(saved)) {
+      return saved;
+    }
+    return 'cyan';
   });
 
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
@@ -92,7 +176,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     const root = window.document.documentElement;
     
-    // Remove all previous theme classes
+    // Remove all previous theme and accent classes
     root.classList.remove(
       'theme-glassmorphism', 
       'theme-liquid-glass', 
@@ -100,11 +184,19 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       'theme-skeuomorphism', 
       'theme-light',
       'dark',
-      'light'
+      'light',
+      'accent-cyan',
+      'accent-purple',
+      'accent-emerald',
+      'accent-amber',
+      'accent-rose',
+      'accent-gold'
     );
 
-    // Apply current theme
+    // Apply current theme and accent classes
     root.classList.add(`theme-${theme}`);
+    root.classList.add(`accent-${accent}`);
+
     if (theme === 'light') {
       root.classList.add('light');
     } else {
@@ -112,10 +204,15 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     localStorage.setItem('studysphere_theme', theme);
-  }, [theme]);
+    localStorage.setItem('studysphere_accent', accent);
+  }, [theme, accent]);
 
   const setTheme = (newTheme: ThemeMode) => {
     setThemeState(newTheme);
+  };
+
+  const setAccent = (newAccent: AccentColor) => {
+    setAccentState(newAccent);
   };
 
   const cycleTheme = () => {
@@ -128,7 +225,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <ThemeContext.Provider value={{ 
       theme, 
+      accent,
       setTheme, 
+      setAccent,
       cycleTheme,
       isThemeModalOpen, 
       setIsThemeModalOpen 
